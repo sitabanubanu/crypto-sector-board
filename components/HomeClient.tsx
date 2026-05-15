@@ -66,7 +66,7 @@ export default function HomeClient({ snapshot }: Props) {
             />
           )}
         </div>
-        <div style={{ flex: 3, minHeight: 0, overflow: "hidden" }}>
+        <div style={{ flex: 3, minHeight: 0, overflow: "auto" }}>
           <TrendPanel sectors={snapshot.sectors} />
         </div>
       </div>
