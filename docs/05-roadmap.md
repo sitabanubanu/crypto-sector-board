@@ -1,32 +1,34 @@
 # 05 - 开发路线图
 
-> 每完成一阶段在此打勾。当前阶段：**阶段 0**
+> 每完成一阶段在此打勾。当前阶段：**阶段 2**
 
 ## 阶段 0 — 项目骨架与文档
 **目标**：仓库可见、文档可读，但没有任何业务代码。
 
 - [x] 0-A 计划文件保存到项目目录（PLAN.md）
 - [x] 0-B 初始化 Next.js 项目（TS + Tailwind）
-- [ ] 0-C 创建 docs/ 6 份标准文档骨架
-- [ ] 0-D 创建 dev-logs/ 模板和首份日志
-- [ ] 0-E 创建 CLAUDE.md（覆盖默认）和 README.md
-- [ ] 0-F git 初始化 + 推送到 GitHub
+- [x] 0-C 创建 docs/ 6 份标准文档骨架
+- [x] 0-D 创建 dev-logs/ 模板和首份日志
+- [x] 0-E 创建 CLAUDE.md（覆盖默认）和 README.md
+- [x] 0-F git 初始化 + 推送到 GitHub
 
-**验收**：用户能在 GitHub 上看到仓库；本地 `npm run dev` 看到 Next.js 默认欢迎页。
+**验收**：✅ 用户能在 GitHub 上看到仓库；本地 `npm run dev` 看到 Next.js 默认欢迎页。
 
 ---
 
 ## 阶段 1 — 板块清单 + 数据抓取脚本
 **目标**：能在本地手动跑出一份正确的快照 JSON。
 
-- [ ] 1-A 把第一节的板块清单转成 `data/sectors.json`（CoinGecko ID 映射）
-- [ ] 1-B 写 `lib/types.ts`：核心类型定义
-- [ ] 1-C 写 `lib/coingecko.ts`：API 封装 + 限频 + 重试
-- [ ] 1-D 写 `lib/metrics.ts`：振幅/收益率/波动率/加权平均
-- [ ] 1-E 写 `scripts/fetch-snapshot.ts`：串起整流程
-- [ ] 1-F 本地跑 `npm run fetch-snapshot`，对照 CoinGecko 网页核对 BTC/ETH/SOL
+- [x] 1-A 把第一节的板块清单转成 `data/sectors.json`（CoinGecko ID 映射，含已知陷阱）
+- [x] 1-B 写 `lib/types.ts`：核心类型定义
+- [x] 1-C 写 `lib/coingecko.ts`：API 封装 + 限频 + 重试（已切换到批量接口）
+- [x] 1-D 写 `lib/metrics.ts`：基于滚动 24h 的指标计算
+- [x] 1-E 写 `scripts/fetch-snapshot.ts`：串起整流程
+- [x] 1-F 本地跑 `npm run fetch-snapshot`，56/56 币全部抓到
 
-**验收**：JSON 文件生成成功，BTC 数据与网页误差 <1%。
+**验收**：✅ JSON 文件生成成功，BTC: open=79545 close=80714 +1.46% amp=3.41%，与 CoinGecko 网页一致。
+
+**重要权衡**：使用批量接口 `/coins/markets` 拿"滚动 24h"数据，而非按 UTC 0 点切日。原因：免费层限频严，精确日 K 线方案要 10 分钟且经常失败。详见 `docs/03-data-spec.md` 第 1 节。
 
 ---
 

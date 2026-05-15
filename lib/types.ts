@@ -1,0 +1,44 @@
+export interface CoinSnapshot {
+  id: string;
+  symbol: string;
+  name: string;
+  marketCap: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  returnPct: number;
+  amplitude: number;
+  volatility: number;
+  isMainstream: boolean;
+}
+
+export interface SectorSnapshot {
+  id: string;
+  name: string;
+  totalMarketCap: number;
+  weightedReturnPct: number;
+  weightedAmplitude: number;
+  weightedVolatility: number;
+  coins: CoinSnapshot[];
+}
+
+export interface DailySnapshot {
+  date: string;
+  generatedAt: string;
+  source: string;
+  sectors: SectorSnapshot[];
+}
+
+export interface SectorConfig {
+  id: string;
+  name: string;
+  coins: string[];
+}
+
+export interface SectorsFile {
+  version: number;
+  lastUpdated: string;
+  mainStreamThreshold: number;
+  sectors: SectorConfig[];
+}

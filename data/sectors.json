@@ -1,0 +1,141 @@
+{
+  "version": 1,
+  "lastUpdated": "2026-05-15",
+  "mainStreamThreshold": 300000000,
+  "sectors": [
+    {
+      "id": "btc",
+      "name": "BTC",
+      "coins": ["bitcoin"]
+    },
+    {
+      "id": "l1",
+      "name": "Layer 1 主流",
+      "coins": [
+        "ethereum",
+        "solana",
+        "binancecoin",
+        "ripple",
+        "cardano",
+        "avalanche-2",
+        "tron",
+        "the-open-network",
+        "polkadot",
+        "sui",
+        "aptos",
+        "near"
+      ]
+    },
+    {
+      "id": "l2",
+      "name": "L2 & 扩容",
+      "coins": [
+        "arbitrum",
+        "optimism",
+        "starknet",
+        "mantle",
+        "conflux-token"
+      ]
+    },
+    {
+      "id": "pow",
+      "name": "PoW 老币",
+      "coins": [
+        "litecoin",
+        "bitcoin-cash",
+        "ethereum-classic"
+      ]
+    },
+    {
+      "id": "defi",
+      "name": "DeFi",
+      "coins": [
+        "aave",
+        "uniswap",
+        "compound-governance-token",
+        "curve-dao-token",
+        "lido-dao",
+        "jupiter-exchange-solana",
+        "ethena",
+        "maker"
+      ]
+    },
+    {
+      "id": "dex-perp",
+      "name": "衍生品 DEX",
+      "coins": [
+        "hyperliquid",
+        "dydx-chain",
+        "aster-2"
+      ]
+    },
+    {
+      "id": "ai",
+      "name": "AI",
+      "coins": [
+        "bittensor",
+        "fetch-ai",
+        "worldcoin-wld",
+        "virtual-protocol",
+        "render-token"
+      ]
+    },
+    {
+      "id": "depin",
+      "name": "DePIN",
+      "coins": [
+        "filecoin",
+        "livepeer",
+        "helium"
+      ]
+    },
+    {
+      "id": "meme",
+      "name": "Memecoin",
+      "coins": [
+        "dogecoin",
+        "pepe",
+        "dogwifcoin",
+        "official-trump",
+        "shiba-inu",
+        "bonk",
+        "floki"
+      ]
+    },
+    {
+      "id": "privacy",
+      "name": "隐私币",
+      "coins": [
+        "monero",
+        "zcash",
+        "dash"
+      ]
+    },
+    {
+      "id": "rwa",
+      "name": "RWA",
+      "coins": ["ondo-finance"]
+    },
+    {
+      "id": "btc-eco",
+      "name": "BTC 生态",
+      "coins": [
+        "ordinals",
+        "blockstack"
+      ]
+    },
+    {
+      "id": "infra",
+      "name": "基础设施",
+      "coins": [
+        "chainlink",
+        "ethereum-name-service"
+      ]
+    },
+    {
+      "id": "other",
+      "name": "其他主流",
+      "coins": ["pi-network"]
+    }
+  ]
+}
