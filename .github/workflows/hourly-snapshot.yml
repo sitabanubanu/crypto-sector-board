@@ -35,3 +35,7 @@ jobs:
             git commit -m "快照: $(date -u +'%Y-%m-%dT%H:00 UTC')"
             git push
           fi
+
+      - name: Trigger Vercel deploy
+        if: success()
+        run: npx vercel deploy --prod --yes --token ${{ secrets.VERCEL_TOKEN }}
