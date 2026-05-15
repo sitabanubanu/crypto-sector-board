@@ -17,8 +17,8 @@ async function main() {
   const sectorsPath = path.join(projectRoot, "data", "sectors.json");
   const sectorsFile: SectorsFile = JSON.parse(fs.readFileSync(sectorsPath, "utf-8"));
 
-  const today = getTodayUTC();
-  console.log(`Fetching market data (24h snapshot as of now, labeled: ${today})`);
+  const timestamp = getTimestampUTC();
+  console.log(`Fetching market data (24h snapshot as of now, labeled: ${timestamp})`);
 
   const snapshotsDir = path.join(projectRoot, "data", "snapshots");
   if (!fs.existsSync(snapshotsDir)) {
@@ -72,21 +72,22 @@ async function main() {
   }
 
   const snapshot: DailySnapshot = {
-    date: today,
+    date: timestamp,
     generatedAt: new Date().toISOString(),
     source: "coingecko",
     sectors: sectorSnapshots,
   };
 
-  const outPath = path.join(snapshotsDir, `${today}.json`);
+  const outPath = path.join(snapshotsDir, `${timestamp}.json`);
   fs.writeFileSync(outPath, JSON.stringify(snapshot, null, 2), "utf-8");
   console.log(`\n✅ Snapshot saved to: ${outPath}`);
 
   printSummary(snapshot);
 }
 
-function getTodayUTC(): string {
-  return new Date().toISOString().split("T")[0];
+function getTimestampUTC(): string {
+  const d = new Date();
+  return d.toISOString().split("T")[0] + "T" + d.toISOString().split("T")[1].slice(0, 2);
 }
 
 function printSummary(snapshot: DailySnapshot) {
