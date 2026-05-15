@@ -10,6 +10,8 @@ export interface CoinSnapshot {
   returnPct: number;
   amplitude: number;
   volatility: number;
+  returnPct7d?: number;
+  returnPct30d?: number;
   isMainstream: boolean;
 }
 
@@ -20,6 +22,8 @@ export interface SectorSnapshot {
   weightedReturnPct: number;
   weightedAmplitude: number;
   weightedVolatility: number;
+  weightedReturnPct7d?: number;
+  weightedReturnPct30d?: number;
   coins: CoinSnapshot[];
 }
 

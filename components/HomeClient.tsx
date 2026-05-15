@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Header from "@/components/Header";
 import SectorTreemap from "@/components/SectorTreemap";
+import TrendPanel from "@/components/TrendPanel";
 import type { DailySnapshot } from "@/lib/types";
 
 interface Props {
@@ -54,15 +55,20 @@ export default function HomeClient({ snapshot }: Props) {
         viewMode={viewMode}
         onViewModeChange={setViewMode}
       />
-      <div ref={containerRef} style={{ flex: 1, position: "relative" }}>
-        {size.width > 0 && size.height > 0 && (
-          <SectorTreemap
-            snapshot={snapshot}
-            width={size.width}
-            height={size.height}
-            viewMode={viewMode}
-          />
-        )}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+        <div ref={containerRef} style={{ flex: 7, position: "relative", minHeight: 0 }}>
+          {size.width > 0 && size.height > 0 && (
+            <SectorTreemap
+              snapshot={snapshot}
+              width={size.width}
+              height={size.height}
+              viewMode={viewMode}
+            />
+          )}
+        </div>
+        <div style={{ flex: 3, minHeight: 0, overflow: "hidden" }}>
+          <TrendPanel sectors={snapshot.sectors} />
+        </div>
       </div>
     </div>
   );

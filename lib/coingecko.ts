@@ -34,6 +34,8 @@ export interface CoinMarketItem {
   price_change_percentage_24h: number;
   ath: number;
   atl: number;
+  price_change_percentage_7d_in_currency: number | null;
+  price_change_percentage_30d_in_currency: number | null;
 }
 
 export async function fetchCoinsMarkets(coinIds: string[]): Promise<CoinMarketItem[]> {
@@ -43,7 +45,7 @@ export async function fetchCoinsMarkets(coinIds: string[]): Promise<CoinMarketIt
   for (let i = 0; i < coinIds.length; i += batchSize) {
     const batch = coinIds.slice(i, i + batchSize);
     const ids = batch.join(",");
-    const url = `${BASE_URL}/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&per_page=${batchSize}&page=1&sparkline=false&price_change_percentage=24h`;
+    const url = `${BASE_URL}/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&per_page=${batchSize}&page=1&sparkline=false&price_change_percentage=24h,7d,30d`;
     if (i > 0) await sleep(RATE_LIMIT_MS);
     console.log(`  Fetching batch ${Math.floor(i / batchSize) + 1} (${batch.length} coins)...`);
     const res = await fetchWithRetry(url);
