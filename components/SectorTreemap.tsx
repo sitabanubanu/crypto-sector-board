@@ -67,10 +67,18 @@ export default function SectorTreemap({ snapshot, width, height, viewMode, perio
 
     const h = hierarchy<Datum>(data as Datum)
       .sum((d) => d.value || 0)
-      .sort((a, b) => (b.value || 0) - (a.value || 0));
+      .sort((a, b) => {
+        // Sort coin children by period return (best first), sectors by value
+        const aCoin = a.data.coin;
+        const bCoin = b.data.coin;
+        if (aCoin && bCoin) {
+          return getCoinReturn(bCoin, period) - getCoinReturn(aCoin, period);
+        }
+        return (b.value || 0) - (a.value || 0);
+      });
 
     return treemap<Datum>().size([width, height]).paddingOuter(8).paddingTop(24).paddingInner(2).round(true)(h);
-  }, [snapshot, width, height]);
+  }, [snapshot, width, height, period]);
 
   const sectorNodes = root.children || [];
 
