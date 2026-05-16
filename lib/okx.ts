@@ -84,7 +84,7 @@ export async function fetchOkxSpotTickers(): Promise<Map<string, OkxTicker>> {
     return _tickerCache.data;
   }
 
-  const url = "https://www.okx.com/api/v5/market/tickers?instType=SPOT";
+  const url = "/api/okx/market/tickers?instType=SPOT";
   const res = await fetch(url);
   if (!res.ok) {
     throw new Error(`OKX API returned ${res.status}`);
@@ -128,7 +128,7 @@ export async function fetchOkxKlines(instIds: string[]): Promise<Map<string, num
     const batch = unique.slice(i, i + BATCH);
     const responses = await Promise.allSettled(
       batch.map(async (instId) => {
-        const url = `https://www.okx.com/api/v5/market/candles?instId=${instId}&bar=1D&limit=31`;
+        const url = `/api/okx/market/candles?instId=${instId}&bar=1D&limit=31`;
         const res = await fetch(url);
         if (!res.ok) throw new Error(`${instId} ${res.status}`);
         const json = await res.json();
