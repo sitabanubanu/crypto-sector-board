@@ -42,23 +42,32 @@ export default function HomeClient({ snapshot }: Props) {
     loadWatchlist(snapshot.sectors.map((s) => s.id)),
   );
 
-  // Size observer
+  // Size observer — ResizeObserver on container + window resize fallback
   useEffect(() => {
-    let rafId: number;
+    const el = containerRef.current;
+    if (!el) return;
+
     const updateSize = () => {
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        setSize({ width: rect.width, height: rect.height });
-      }
+      const rect = el.getBoundingClientRect();
+      setSize({ width: rect.width, height: rect.height });
     };
     updateSize();
-    const debouncedUpdate = () => {
+
+    // ResizeObserver catches layout changes (flex, view toggle, etc.)
+    const ro = new ResizeObserver(() => updateSize());
+    ro.observe(el);
+
+    // Window resize as fallback
+    let rafId: number;
+    const debouncedResize = () => {
       cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(updateSize);
     };
-    window.addEventListener("resize", debouncedUpdate);
+    window.addEventListener("resize", debouncedResize);
+
     return () => {
-      window.removeEventListener("resize", debouncedUpdate);
+      ro.disconnect();
+      window.removeEventListener("resize", debouncedResize);
       cancelAnimationFrame(rafId);
     };
   }, []);
