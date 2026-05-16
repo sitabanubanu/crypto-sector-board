@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { hierarchy, treemap } from "d3-hierarchy";
 import type { DailySnapshot, SectorSnapshot, CoinSnapshot, PeriodType } from "@/lib/types";
+import type { SectorSignal } from "@/lib/signals";
 import { formatPct, formatMarketCap, getSectorReturn, getCoinReturn, sectorColorForPeriod, sectorTextColorForPeriod, coinColorForPeriod, coinTextColorForPeriod } from "@/lib/colors";
 
 type ViewMode = "detailed" | "overview";
@@ -13,6 +14,8 @@ interface Props {
   height: number;
   viewMode: ViewMode;
   period: PeriodType;
+  signals?: Map<string, SectorSignal>;
+  onCoinClick?: (coin: CoinSnapshot, sectorName: string) => void;
 }
 
 interface HoverInfo {
@@ -22,7 +25,7 @@ interface HoverInfo {
   y: number;
 }
 
-export default function SectorTreemap({ snapshot, width, height, viewMode, period }: Props) {
+export default function SectorTreemap({ snapshot, width, height, viewMode, period, signals, onCoinClick }: Props) {
   const [hover, setHover] = useState<HoverInfo | null>(null);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -85,6 +88,7 @@ export default function SectorTreemap({ snapshot, width, height, viewMode, perio
           if (viewMode === "overview") {
             const titleSize = Math.max(12, Math.min(24, Math.sqrt(sw * sh) / 8));
             const pctSize = Math.max(11, Math.min(20, Math.sqrt(sw * sh) / 10));
+            const sig = signals?.get(sector.id);
             return (
               <g key={sector.id}>
                 <rect
@@ -105,7 +109,7 @@ export default function SectorTreemap({ snapshot, width, height, viewMode, perio
                   fontWeight={700}
                   fill={sectorTextColor}
                 >
-                  {sector.name}
+                  {sig ? `${sig.icon} ${sector.name}` : sector.name}
                 </text>
                 <text
                   x={sectorNode.x0 + sw / 2}
@@ -122,6 +126,8 @@ export default function SectorTreemap({ snapshot, width, height, viewMode, perio
               </g>
             );
           }
+
+          const sig = signals?.get(sector.id);
 
           return (
             <g key={sector.id}>
@@ -154,7 +160,7 @@ export default function SectorTreemap({ snapshot, width, height, viewMode, perio
                 fontWeight={600}
                 fill={sectorTextColor}
               >
-                {sector.name}
+                {sig ? `${sig.icon} ${sector.name}` : sector.name}
               </text>
               <text
                 x={sectorNode.x0 + sw - 8}
@@ -181,6 +187,12 @@ export default function SectorTreemap({ snapshot, width, height, viewMode, perio
                 const showText = cw > 24 && ch > 18;
                 const showPct = showText && cw > 36 && ch > 30;
 
+                // Volume-based border: thicker = higher turnover
+                const turnover = coin.volume24h && coin.marketCap > 0
+                  ? coin.volume24h / coin.marketCap
+                  : 0;
+                const borderW = 0.5 + Math.min(turnover * 600, 2.5);
+
                 return (
                   <g
                     key={coin.id}
@@ -201,6 +213,7 @@ export default function SectorTreemap({ snapshot, width, height, viewMode, perio
                       })
                     }
                     onMouseLeave={() => hideHover()}
+                    onClick={() => onCoinClick?.(coin, sector.name)}
                     style={{ cursor: "pointer" }}
                   >
                     <rect
@@ -210,7 +223,7 @@ export default function SectorTreemap({ snapshot, width, height, viewMode, perio
                       height={ch}
                       fill={coinColor}
                       stroke="#ffffff"
-                      strokeWidth={1.5}
+                      strokeWidth={borderW}
                       clipPath={`url(#clip-${sector.id})`}
                       style={{ transition: "opacity 0.12s" }}
                       onMouseEnter={(e) => {
@@ -264,7 +277,7 @@ export default function SectorTreemap({ snapshot, width, height, viewMode, perio
   );
 }
 
-const PERIOD_LABEL: Record<PeriodType, string> = { "24h": "24h 涨跌", "7d": "7d 涨跌", "30d": "30d 涨跌" };
+const PERIOD_LABEL: Record<PeriodType, string> = { "24h": "24h 涨跌", "3d": "3d 涨跌", "7d": "7d 涨跌", "30d": "30d 涨跌" };
 
 function Tooltip({ info, period }: { info: HoverInfo; period: PeriodType }) {
   const { coin, sectorName, x, y } = info;
@@ -318,6 +331,9 @@ function Tooltip({ info, period }: { info: HoverInfo; period: PeriodType }) {
         valueColor={coinColorForPeriod(coin, period)}
       />
       <Row label="振幅" value={`${(coin.amplitude * 100).toFixed(2)}%`} />
+      {coin.volume24h != null && coin.volume24h > 0 && (
+        <Row label="24h 成交量" value={formatMarketCap(coin.volume24h)} />
+      )}
       <Row label="市值" value={formatMarketCap(coin.marketCap)} />
     </div>
   );

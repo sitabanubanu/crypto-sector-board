@@ -5,6 +5,7 @@ import Header from "@/components/Header";
 import SectorTreemap from "@/components/SectorTreemap";
 import TrendBarChart from "@/components/TrendBarChart";
 import WatchlistEditor from "@/components/WatchlistEditor";
+import CoinDetailModal from "@/components/CoinDetailModal";
 import {
   loadWatchlist,
   toggleSector,
@@ -16,11 +17,14 @@ import {
 } from "@/lib/watchlist";
 import {
   fetchOkxSpotTickers,
+  fetchOkxKlines,
   buildSnapshotFromOkx,
   buildCustomSectorsFromOkx,
   getOkxUsdtSpotIds,
+  CG_TO_OKX,
 } from "@/lib/okx";
-import type { DailySnapshot, PeriodType, WatchlistConfig, SectorConfig, OkxTicker, CustomSectorConfig } from "@/lib/types";
+import { detectAllSignals } from "@/lib/signals";
+import type { DailySnapshot, PeriodType, WatchlistConfig, SectorConfig, OkxTicker, CustomSectorConfig, CoinSnapshot, SectorSnapshot } from "@/lib/types";
 
 interface Props {
   snapshot: DailySnapshot;
@@ -36,7 +40,9 @@ export default function HomeClient({ snapshot }: Props) {
   const [okxData, setOkxData] = useState<DailySnapshot | null>(null);
   const [okxTickers, setOkxTickers] = useState<Map<string, OkxTicker> | null>(null);
   const [okxStatus, setOkxStatus] = useState<"idle" | "loading" | "live" | "error">("idle");
+  const [okxKlines, setOkxKlines] = useState<Map<string, number[]> | null>(null);
   const [mainView, setMainView] = useState<"split" | "chart" | "treemap">("split");
+  const [selectedCoin, setSelectedCoin] = useState<{ coin: CoinSnapshot; sectorName: string } | null>(null);
   const [watchlistOpen, setWatchlistOpen] = useState(false);
   const [watchlistConfig, setWatchlistConfig] = useState<WatchlistConfig>(() =>
     loadWatchlist(snapshot.sectors.map((s) => s.id)),
@@ -84,7 +90,25 @@ export default function HomeClient({ snapshot }: Props) {
     try {
       const tickers = await fetchOkxSpotTickers();
       setOkxTickers(tickers);
-      const merged = buildSnapshotFromOkx(sectorConfig, tickers, snapshot);
+
+      // Collect instIds only for coins we track (built-in + custom sectors)
+      const needed = new Set<string>();
+      for (const sc of sectorConfig) {
+        for (const coinId of sc.coins) {
+          const okxId = CG_TO_OKX[coinId];
+          if (okxId) needed.add(okxId);
+        }
+      }
+      for (const cs of watchlistConfig.customSectors ?? []) {
+        for (const instId of cs.coins) needed.add(instId);
+      }
+      const klines = needed.size > 0
+        ? await fetchOkxKlines([...needed])
+        : new Map<string, number[]>();
+      setOkxKlines(klines);
+
+      // Build snapshot with klines data
+      const merged = buildSnapshotFromOkx(sectorConfig, tickers, snapshot, klines);
       if (merged.sectors.length > 0) {
         setOkxData(merged);
         setOkxStatus("live");
@@ -92,7 +116,7 @@ export default function HomeClient({ snapshot }: Props) {
     } catch {
       setOkxStatus("error");
     }
-  }, [sectorConfig, snapshot]);
+  }, [sectorConfig, snapshot, watchlistConfig]);
 
   // Fetch OKX on mount + auto-refresh
   useEffect(() => {
@@ -132,7 +156,7 @@ export default function HomeClient({ snapshot }: Props) {
     const customSectorsConfig = watchlistConfig.customSectors ?? [];
     let customSectorSnapshots: DailySnapshot["sectors"] = [];
     if (customSectorsConfig.length > 0 && okxTickers) {
-      const built = buildCustomSectorsFromOkx(customSectorsConfig, okxTickers, snapshot);
+      const built = buildCustomSectorsFromOkx(customSectorsConfig, okxTickers, snapshot, okxKlines ?? undefined);
       customSectorSnapshots = built.filter(
         (s) => watchlistConfig.sectors[s.id]?.enabled !== false,
       );
@@ -144,7 +168,26 @@ export default function HomeClient({ snapshot }: Props) {
       generatedAt: (okxData ?? filtered).generatedAt,
       source: (okxData ?? filtered).source,
     };
-  }, [okxData, okxTickers, snapshot, watchlistConfig]);
+  }, [okxData, okxTickers, snapshot, watchlistConfig, okxKlines]);
+
+  // Sector rotation signals
+  const signals = useMemo(() => detectAllSignals(activeSnapshot.sectors), [activeSnapshot.sectors]);
+
+  // Total volume across all sectors for volume dot scaling
+  const totalVolume = useMemo(
+    () => activeSnapshot.sectors.reduce((sum, s) => sum + (s.totalVolume24h ?? 0), 0),
+    [activeSnapshot.sectors],
+  );
+
+  // Coin → sector lookup for detail modal
+  const coinSector = useMemo(() => {
+    for (const s of activeSnapshot.sectors) {
+      for (const c of s.coins) {
+        if (c.id === selectedCoin?.coin.id) return s;
+      }
+    }
+    return undefined;
+  }, [activeSnapshot.sectors, selectedCoin]);
 
   // Derived data for UI
   const okxUsdtIds = useMemo(() => {
@@ -214,6 +257,8 @@ export default function HomeClient({ snapshot }: Props) {
               height={size.height}
               viewMode={viewMode}
               period={period}
+              signals={signals}
+              onCoinClick={(coin, sectorName) => setSelectedCoin({ coin, sectorName })}
             />
           )}
         </div>
@@ -224,7 +269,7 @@ export default function HomeClient({ snapshot }: Props) {
             overflow: mainView === "treemap" ? "hidden" : "auto",
           }}
         >
-          <TrendBarChart sectors={activeSnapshot.sectors} />
+          <TrendBarChart sectors={activeSnapshot.sectors} signals={signals} totalVolume={totalVolume} />
         </div>
 
         {/* View toggle — bottom-left corner */}
@@ -273,6 +318,15 @@ export default function HomeClient({ snapshot }: Props) {
         onUpdateCustomSector={handleUpdateCustomSector}
         onDeleteCustomSector={handleDeleteCustomSector}
       />
+
+      {selectedCoin && coinSector && (
+        <CoinDetailModal
+          coin={selectedCoin.coin}
+          sectorName={selectedCoin.sectorName}
+          sector={coinSector}
+          onClose={() => setSelectedCoin(null)}
+        />
+      )}
     </div>
   );
 }

@@ -2,7 +2,7 @@ import type { SectorConfig, CoinSnapshot, SectorSnapshot, DailySnapshot, OkxTick
 import { calcWeightedSectorMetrics } from "./metrics";
 
 // CoinGecko coin ID → OKX spot instrument ID (USDT pairs)
-const CG_TO_OKX: Record<string, string | null> = {
+export const CG_TO_OKX: Record<string, string | null> = {
   // BTC
   bitcoin: "BTC-USDT",
   // Layer 1
@@ -96,16 +96,67 @@ export async function fetchOkxSpotTickers(): Promise<Map<string, OkxTicker>> {
 
   const map = new Map<string, OkxTicker>();
   for (const t of json.data) {
-    map.set(t.instId, t);
+    map.set(t.instId, {
+      instId: t.instId,
+      last: t.last,
+      open24h: t.open24h,
+      high24h: t.high24h,
+      low24h: t.low24h,
+      volCcy24h: t.volCcy24h ?? "0",
+    });
   }
   _tickerCache = { data: map, ts: now };
   return map;
+}
+
+// --- Klines (daily candles) for 3d/7d/30d calculation ---
+
+let _klinesCache: { data: Map<string, number[]>; ts: number } | null = null;
+const KLINES_CACHE_MS = 300000; // 5 minutes
+
+export async function fetchOkxKlines(instIds: string[]): Promise<Map<string, number[]>> {
+  const now = Date.now();
+  if (_klinesCache && now - _klinesCache.ts < KLINES_CACHE_MS) {
+    return _klinesCache.data;
+  }
+
+  const result = new Map<string, number[]>();
+  const unique = [...new Set(instIds)];
+  const BATCH = 8;
+
+  for (let i = 0; i < unique.length; i += BATCH) {
+    const batch = unique.slice(i, i + BATCH);
+    const responses = await Promise.allSettled(
+      batch.map(async (instId) => {
+        const url = `https://www.okx.com/api/v5/market/candles?instId=${instId}&bar=1D&limit=31`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`${instId} ${res.status}`);
+        const json = await res.json();
+        if (json.code !== "0" || !Array.isArray(json.data)) {
+          throw new Error(`${instId} code ${json.code}`);
+        }
+        // Each candle: [ts, open, high, low, close, vol, volCcy, ...]
+        // Return closes in descending time order (most recent first)
+        return { instId, closes: json.data.map((c: string[]) => parseFloat(c[4])) };
+      }),
+    );
+
+    for (const r of responses) {
+      if (r.status === "fulfilled") {
+        result.set(r.value.instId, r.value.closes);
+      }
+    }
+  }
+
+  _klinesCache = { data: result, ts: now };
+  return result;
 }
 
 export function buildSnapshotFromOkx(
   sectorsConfig: SectorConfig[],
   okxData: Map<string, OkxTicker>,
   fallbackSnapshot: DailySnapshot,
+  klinesData?: Map<string, number[]>,
 ): DailySnapshot {
   // Build a lookup from the fallback snapshot for fast access
   const fallbackCoinMap = new Map<string, CoinSnapshot>();
@@ -131,10 +182,23 @@ export function buildSnapshotFromOkx(
           const open24h = parseFloat(ticker.open24h);
           const high24h = parseFloat(ticker.high24h);
           const low24h = parseFloat(ticker.low24h);
+          const volume24h = parseFloat(ticker.volCcy24h) || undefined;
 
           const returnPct = open24h > 0 ? (last - open24h) / open24h : 0;
           const amplitude = low24h > 0 ? high24h / low24h - 1 : 0;
           const volatility = amplitude / 2;
+
+          // Klines-based 3d/7d/30d (prefer over fallback)
+          const closes = klinesData?.get(okxSymbol);
+          const returnPct3d = closes && closes.length > 3 && closes[3] > 0
+            ? (last - closes[3]) / closes[3]
+            : fallback?.returnPct3d;
+          const returnPct7d = closes && closes.length > 7 && closes[7] > 0
+            ? (last - closes[7]) / closes[7]
+            : fallback?.returnPct7d;
+          const returnPct30d = closes && closes.length > 29 && closes[29] > 0
+            ? (last - closes[29]) / closes[29]
+            : fallback?.returnPct30d;
 
           coinSnapshots.push({
             id: coinId,
@@ -148,8 +212,10 @@ export function buildSnapshotFromOkx(
             returnPct,
             amplitude,
             volatility,
-            returnPct7d: fallback?.returnPct7d,
-            returnPct30d: fallback?.returnPct30d,
+            returnPct3d,
+            returnPct7d,
+            returnPct30d,
+            volume24h,
             isMainstream: fallback?.isMainstream ?? false,
           });
           continue;
@@ -165,12 +231,14 @@ export function buildSnapshotFromOkx(
     }
 
     const totalMarketCap = coinSnapshots.reduce((sum, c) => sum + c.marketCap, 0);
+    const totalVolume24h = coinSnapshots.reduce((sum, c) => sum + (c.volume24h ?? 0), 0);
     const weighted = calcWeightedSectorMetrics(coinSnapshots);
 
     sectorSnapshots.push({
       id: sectorCfg.id,
       name: sectorCfg.name,
       totalMarketCap,
+      totalVolume24h: totalVolume24h > 0 ? totalVolume24h : undefined,
       ...weighted,
       coins: coinSnapshots,
     });
@@ -199,6 +267,7 @@ export function buildCustomSectorsFromOkx(
   customSectors: CustomSectorConfig[],
   okxData: Map<string, OkxTicker>,
   fallbackSnapshot: DailySnapshot,
+  klinesData?: Map<string, number[]>,
 ): SectorSnapshot[] {
   // Build fallback lookup by uppercase symbol
   const fallbackBySymbol = new Map<string, CoinSnapshot>();
@@ -224,6 +293,7 @@ export function buildCustomSectorsFromOkx(
       const open24h = parseFloat(ticker.open24h);
       const high24h = parseFloat(ticker.high24h);
       const low24h = parseFloat(ticker.low24h);
+      const volume24h = parseFloat(ticker.volCcy24h) || undefined;
 
       const returnPct = open24h > 0 ? (last - open24h) / open24h : 0;
       const amplitude = low24h > 0 ? high24h / low24h - 1 : 0;
@@ -233,6 +303,18 @@ export function buildCustomSectorsFromOkx(
       const symbol = instId.replace(/-USDT$/i, "");
 
       const fallback = fallbackBySymbol.get(symbol.toUpperCase());
+
+      // Klines-based 3d/7d/30d
+      const closes = klinesData?.get(instId);
+      const returnPct3d = closes && closes.length > 3 && closes[3] > 0
+        ? (last - closes[3]) / closes[3]
+        : fallback?.returnPct3d;
+      const returnPct7d = closes && closes.length > 7 && closes[7] > 0
+        ? (last - closes[7]) / closes[7]
+        : fallback?.returnPct7d;
+      const returnPct30d = closes && closes.length > 29 && closes[29] > 0
+        ? (last - closes[29]) / closes[29]
+        : fallback?.returnPct30d;
 
       coinSnapshots.push({
         id: `custom-${instId}`,
@@ -246,8 +328,10 @@ export function buildCustomSectorsFromOkx(
         returnPct,
         amplitude,
         volatility,
-        returnPct7d: fallback?.returnPct7d,
-        returnPct30d: fallback?.returnPct30d,
+        returnPct3d,
+        returnPct7d,
+        returnPct30d,
+        volume24h,
         isMainstream: true,
       });
     }
@@ -258,12 +342,14 @@ export function buildCustomSectorsFromOkx(
     }
 
     const totalMarketCap = coinSnapshots.reduce((sum, c) => sum + c.marketCap, 0);
+    const totalVolume24h = coinSnapshots.reduce((sum, c) => sum + (c.volume24h ?? 0), 0);
     const weighted = calcWeightedSectorMetrics(coinSnapshots);
 
     result.push({
       id: cs.id,
       name: cs.name,
       totalMarketCap,
+      totalVolume24h: totalVolume24h > 0 ? totalVolume24h : undefined,
       ...weighted,
       coins: coinSnapshots,
     });

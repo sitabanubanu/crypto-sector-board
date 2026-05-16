@@ -1,4 +1,4 @@
-export type PeriodType = "24h" | "7d" | "30d";
+export type PeriodType = "24h" | "3d" | "7d" | "30d";
 export type DataSource = "snapshot" | "okx";
 
 export interface CoinSnapshot {
@@ -13,8 +13,10 @@ export interface CoinSnapshot {
   returnPct: number;
   amplitude: number;
   volatility: number;
+  returnPct3d?: number;
   returnPct7d?: number;
   returnPct30d?: number;
+  volume24h?: number;
   isMainstream: boolean;
 }
 
@@ -22,9 +24,11 @@ export interface SectorSnapshot {
   id: string;
   name: string;
   totalMarketCap: number;
+  totalVolume24h?: number;
   weightedReturnPct: number;
   weightedAmplitude: number;
   weightedVolatility: number;
+  weightedReturnPct3d?: number;
   weightedReturnPct7d?: number;
   weightedReturnPct30d?: number;
   coins: CoinSnapshot[];
@@ -67,4 +71,5 @@ export interface OkxTicker {
   open24h: string;
   high24h: string;
   low24h: string;
+  volCcy24h: string;
 }

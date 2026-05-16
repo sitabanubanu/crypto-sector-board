@@ -1,18 +1,21 @@
 import type { SectorSnapshot, CoinSnapshot, PeriodType } from "./types";
 
 export function getSectorReturn(sector: SectorSnapshot, period: PeriodType): number {
+  if (period === "3d") return sector.weightedReturnPct3d ?? 0;
   if (period === "7d") return sector.weightedReturnPct7d ?? 0;
   if (period === "30d") return sector.weightedReturnPct30d ?? 0;
   return sector.weightedReturnPct;
 }
 
 export function getCoinReturn(coin: CoinSnapshot, period: PeriodType): number {
+  if (period === "3d") return coin.returnPct3d ?? 0;
   if (period === "7d") return coin.returnPct7d ?? 0;
   if (period === "30d") return coin.returnPct30d ?? 0;
   return coin.returnPct;
 }
 
 export function hasSectorReturnForPeriod(sector: SectorSnapshot, period: PeriodType): boolean {
+  if (period === "3d") return sector.weightedReturnPct3d != null;
   if (period === "7d") return sector.weightedReturnPct7d != null;
   if (period === "30d") return sector.weightedReturnPct30d != null;
   return true;
@@ -39,6 +42,7 @@ export function formatPct(pct: number): string {
 }
 
 export function hasCoinReturnForPeriod(coin: CoinSnapshot, period: PeriodType): boolean {
+  if (period === "3d") return coin.returnPct3d != null;
   if (period === "7d") return coin.returnPct7d != null;
   if (period === "30d") return coin.returnPct30d != null;
   return true;

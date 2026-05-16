@@ -17,23 +17,35 @@ export function calcCoinMetricsFromMarket(coin: CoinMarketItem) {
 }
 
 export function calcWeightedSectorMetrics(
-  coins: { returnPct: number; amplitude: number; volatility: number; returnPct7d?: number; returnPct30d?: number; marketCap: number; isMainstream: boolean }[]
+  coins: { returnPct: number; amplitude: number; volatility: number; returnPct3d?: number; returnPct7d?: number; returnPct30d?: number; marketCap: number; isMainstream: boolean }[]
 ) {
   const mainstream = coins.filter((c) => c.isMainstream);
   if (mainstream.length === 0) {
-    return { weightedReturnPct: 0, weightedAmplitude: 0, weightedVolatility: 0, weightedReturnPct7d: 0, weightedReturnPct30d: 0 };
+    return { weightedReturnPct: 0, weightedAmplitude: 0, weightedVolatility: 0 };
   }
 
   const totalCap = mainstream.reduce((sum, c) => sum + c.marketCap, 0);
   if (totalCap === 0) {
-    return { weightedReturnPct: 0, weightedAmplitude: 0, weightedVolatility: 0, weightedReturnPct7d: 0, weightedReturnPct30d: 0 };
+    return { weightedReturnPct: 0, weightedAmplitude: 0, weightedVolatility: 0 };
   }
 
   const weightedReturnPct = mainstream.reduce((sum, c) => sum + c.returnPct * c.marketCap, 0) / totalCap;
   const weightedAmplitude = mainstream.reduce((sum, c) => sum + c.amplitude * c.marketCap, 0) / totalCap;
   const weightedVolatility = mainstream.reduce((sum, c) => sum + c.volatility * c.marketCap, 0) / totalCap;
-  const weightedReturnPct7d = mainstream.reduce((sum, c) => sum + (c.returnPct7d ?? 0) * c.marketCap, 0) / totalCap;
-  const weightedReturnPct30d = mainstream.reduce((sum, c) => sum + (c.returnPct30d ?? 0) * c.marketCap, 0) / totalCap;
 
-  return { weightedReturnPct, weightedAmplitude, weightedVolatility, weightedReturnPct7d, weightedReturnPct30d };
+  const has3d = mainstream.some((c) => c.returnPct3d != null);
+  const has7d = mainstream.some((c) => c.returnPct7d != null);
+  const has30d = mainstream.some((c) => c.returnPct30d != null);
+
+  const weightedReturnPct3d = has3d
+    ? mainstream.reduce((sum, c) => sum + (c.returnPct3d ?? 0) * c.marketCap, 0) / totalCap
+    : undefined;
+  const weightedReturnPct7d = has7d
+    ? mainstream.reduce((sum, c) => sum + (c.returnPct7d ?? 0) * c.marketCap, 0) / totalCap
+    : undefined;
+  const weightedReturnPct30d = has30d
+    ? mainstream.reduce((sum, c) => sum + (c.returnPct30d ?? 0) * c.marketCap, 0) / totalCap
+    : undefined;
+
+  return { weightedReturnPct, weightedAmplitude, weightedVolatility, weightedReturnPct3d, weightedReturnPct7d, weightedReturnPct30d };
 }
