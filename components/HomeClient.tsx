@@ -6,7 +6,8 @@ import SectorTreemap from "@/components/SectorTreemap";
 import TrendBarChart from "@/components/TrendBarChart";
 import WatchlistEditor from "@/components/WatchlistEditor";
 import { loadWatchlist, toggleSector, resetWatchlist, filterSnapshotByWatchlist } from "@/lib/watchlist";
-import type { DailySnapshot, PeriodType, DataSource, WatchlistConfig } from "@/lib/types";
+import { fetchOkxSpotTickers, buildSnapshotFromOkx } from "@/lib/okx";
+import type { DailySnapshot, PeriodType, DataSource, WatchlistConfig, SectorConfig } from "@/lib/types";
 
 interface Props {
   snapshot: DailySnapshot;
@@ -48,21 +49,26 @@ export default function HomeClient({ snapshot }: Props) {
     };
   }, []);
 
-  // Fetch OKX data
+  // Derive sector config from snapshot (for OKX merging)
+  const sectorConfig = useMemo<SectorConfig[]>(
+    () => snapshot.sectors.map((s) => ({ id: s.id, name: s.name, coins: s.coins.map((c) => c.id) })),
+    [snapshot],
+  );
+
+  // Fetch OKX data — browser calls OKX directly (no Vercel proxy needed)
   const fetchOkx = useCallback(async () => {
     setOkxStatus((prev) => (prev === "idle" ? "loading" : prev));
     try {
-      const res = await fetch("/api/exchange");
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as DailySnapshot;
-      if (data.sectors) {
-        setOkxData(data);
+      const tickers = await fetchOkxSpotTickers();
+      const merged = buildSnapshotFromOkx(sectorConfig, tickers, snapshot);
+      if (merged.sectors.length > 0) {
+        setOkxData(merged);
         setOkxStatus("live");
       }
     } catch {
       setOkxStatus("error");
     }
-  }, []);
+  }, [sectorConfig, snapshot]);
 
   // Trigger OKX fetch when data source changes
   useEffect(() => {
