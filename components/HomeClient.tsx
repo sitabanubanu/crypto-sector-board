@@ -36,6 +36,7 @@ export default function HomeClient({ snapshot }: Props) {
   const [okxData, setOkxData] = useState<DailySnapshot | null>(null);
   const [okxTickers, setOkxTickers] = useState<Map<string, OkxTicker> | null>(null);
   const [okxStatus, setOkxStatus] = useState<"idle" | "loading" | "live" | "error">("idle");
+  const [mainView, setMainView] = useState<"split" | "chart" | "treemap">("split");
   const [watchlistOpen, setWatchlistOpen] = useState(false);
   const [watchlistConfig, setWatchlistConfig] = useState<WatchlistConfig>(() =>
     loadWatchlist(snapshot.sectors.map((s) => s.id)),
@@ -187,21 +188,55 @@ export default function HomeClient({ snapshot }: Props) {
         okxStatus={okxStatus}
         onOpenWatchlist={() => setWatchlistOpen(true)}
       />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-        <div ref={containerRef} style={{ flex: 7, position: "relative", minHeight: 0 }}>
-          {size.width > 0 && size.height > 0 && (
-            <SectorTreemap
-              snapshot={activeSnapshot}
-              width={size.width}
-              height={size.height}
-              viewMode={viewMode}
-              period={period}
-            />
-          )}
-        </div>
-        <div style={{ flex: 3, minHeight: 0, overflow: "auto" }}>
-          <TrendBarChart sectors={activeSnapshot.sectors} />
-        </div>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, position: "relative" }}>
+        {mainView !== "chart" && (
+          <div ref={containerRef} style={{ flex: mainView === "treemap" ? 1 : 7, position: "relative", minHeight: 0 }}>
+            {size.width > 0 && size.height > 0 && (
+              <SectorTreemap
+                snapshot={activeSnapshot}
+                width={size.width}
+                height={size.height}
+                viewMode={viewMode}
+                period={period}
+              />
+            )}
+          </div>
+        )}
+        {mainView !== "treemap" && (
+          <div style={{ flex: mainView === "chart" ? 1 : 3, minHeight: 0, overflow: "auto" }}>
+            <TrendBarChart sectors={activeSnapshot.sectors} />
+          </div>
+        )}
+
+        {/* View toggle — bottom-left corner */}
+        <button
+          onClick={() => {
+            const next: Record<string, "split" | "chart" | "treemap"> = {
+              split: "chart",
+              chart: "treemap",
+              treemap: "split",
+            };
+            setMainView(next[mainView]);
+          }}
+          title="切换视图"
+          style={{
+            position: "absolute",
+            left: 12,
+            bottom: 12,
+            background: "#ffffff",
+            border: "1px solid #e5e7eb",
+            borderRadius: 8,
+            padding: "6px 12px",
+            fontSize: 12,
+            fontWeight: 600,
+            color: "#6b7280",
+            cursor: "pointer",
+            boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+            zIndex: 10,
+          }}
+        >
+          {mainView === "split" ? "▣ 柱状图全屏" : mainView === "chart" ? "▦ 板块全屏" : "⊞ 分屏"}
+        </button>
       </div>
 
       <WatchlistEditor
