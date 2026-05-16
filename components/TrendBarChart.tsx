@@ -9,17 +9,8 @@ interface Props {
   sectors: SectorSnapshot[];
   signals?: Map<string, SectorSignal>;
   totalVolume?: number;
+  isMobile?: boolean;
 }
-
-const ROW_H = 34;
-const BAR_H = 18;
-const LABEL_W = 110;
-const PAD = 8;
-const HEADER_H = 28;
-const TITLE_H = 32;
-const FOOTER_H = 36;
-const COL_GAP = 1;
-const SIGNAL_W = 36;
 
 const PERIODS = [
   { key: "24h" as const, label: "24h" },
@@ -28,7 +19,17 @@ const PERIODS = [
   { key: "30d" as const, label: "30d" },
 ];
 
-export default function TrendBarChart({ sectors, signals, totalVolume }: Props) {
+export default function TrendBarChart({ sectors, signals, totalVolume, isMobile }: Props) {
+  const ROW_H = isMobile ? 30 : 34;
+  const BAR_H = isMobile ? 14 : 18;
+  const LABEL_W = isMobile ? 76 : 110;
+  const PAD = isMobile ? 6 : 8;
+  const HEADER_H = isMobile ? 24 : 28;
+  const TITLE_H = isMobile ? 24 : 32;
+  const FOOTER_H = isMobile ? 28 : 36;
+  const COL_GAP = isMobile ? 0 : 1;
+  const SIGNAL_W = isMobile ? 26 : 36;
+
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
 
@@ -97,8 +98,8 @@ export default function TrendBarChart({ sectors, signals, totalVolume }: Props) 
     >
       <svg width={width} height={chartH} style={{ display: "block" }}>
         {/* Title */}
-        <text x={PAD} y={20} fontSize={12} fontWeight={600} fill="#1f2328">
-          多时间维度板块对比
+        <text x={PAD} y={isMobile ? 16 : 20} fontSize={isMobile ? 10 : 12} fontWeight={600} fill="#1f2328">
+          {isMobile ? "板块对比" : "多时间维度板块对比"}
         </text>
 
         {/* Unified panel background */}
@@ -151,9 +152,9 @@ export default function TrendBarChart({ sectors, signals, totalVolume }: Props) 
             <text
               key={p.key}
               x={zeroX}
-              y={TITLE_H + 17}
+              y={TITLE_H + HEADER_H / 2 + 4}
               textAnchor="middle"
-              fontSize={10}
+              fontSize={isMobile ? 9 : 10}
               fontWeight={600}
               fill="#4b5563"
             >
@@ -164,13 +165,13 @@ export default function TrendBarChart({ sectors, signals, totalVolume }: Props) 
         {/* Signal header */}
         <text
           x={chartEnd + SIGNAL_W / 2}
-          y={TITLE_H + 17}
+          y={TITLE_H + HEADER_H / 2 + 4}
           textAnchor="middle"
-          fontSize={10}
+          fontSize={isMobile ? 9 : 10}
           fontWeight={600}
           fill="#9ca3af"
         >
-          信号
+          {isMobile ? "" : "信号"}
         </text>
 
         {/* Rows */}
@@ -195,7 +196,7 @@ export default function TrendBarChart({ sectors, signals, totalVolume }: Props) 
                 y={labelY}
                 textAnchor="end"
                 dominantBaseline="middle"
-                fontSize={12}
+                fontSize={isMobile ? 11 : 12}
                 fontWeight={600}
                 fill="#1f2328"
               >
@@ -230,7 +231,7 @@ export default function TrendBarChart({ sectors, signals, totalVolume }: Props) 
                         y={labelY}
                         textAnchor="middle"
                         dominantBaseline="middle"
-                        fontSize={10}
+                        fontSize={isMobile ? 9 : 10}
                         fill="#d1d5db"
                       >
                         --
@@ -286,7 +287,7 @@ export default function TrendBarChart({ sectors, signals, totalVolume }: Props) 
                       y={labelY}
                       textAnchor={pctAnchor}
                       dominantBaseline="middle"
-                      fontSize={10}
+                      fontSize={isMobile ? 9 : 10}
                       fontWeight={600}
                       fill={barColor}
                     >
@@ -303,7 +304,7 @@ export default function TrendBarChart({ sectors, signals, totalVolume }: Props) 
                   y={labelY}
                   textAnchor="middle"
                   dominantBaseline="middle"
-                  fontSize={14}
+                  fontSize={isMobile ? 12 : 14}
                 >
                   {signals.get(row.id)!.icon}
                 </text>
@@ -313,8 +314,10 @@ export default function TrendBarChart({ sectors, signals, totalVolume }: Props) 
         })}
 
         {/* Usage footer */}
-        <text x={PAD} y={chartH - 12} fontSize={10} fill="#9ca3af">
-          用法：四列同屏对比趋势。圆点大小=成交量占比。🔥强势确认 💰回调机会 ⚠️诱多陷阱 ❄️弱势回避
+        <text x={PAD} y={chartH - 12} fontSize={isMobile ? 8 : 10} fill="#9ca3af">
+          {isMobile
+            ? "24h/3d/7d/30d 四列对比 · 圆点=成交量 · 🔥强 💰回 ⚠️诱 ❄️弱"
+            : "用法：四列同屏对比趋势。圆点大小=成交量占比。🔥强势确认 💰回调机会 ⚠️诱多陷阱 ❄️弱势回避"}
         </text>
       </svg>
     </div>

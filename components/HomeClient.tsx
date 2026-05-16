@@ -32,7 +32,19 @@ interface Props {
 
 const OKX_REFRESH_MS = 30000;
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+  return isMobile;
+}
+
 export default function HomeClient({ snapshot }: Props) {
+  const isMobile = useIsMobile();
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [viewMode, setViewMode] = useState<"detailed" | "overview">("detailed");
@@ -221,7 +233,7 @@ export default function HomeClient({ snapshot }: Props) {
   return (
     <div
       style={{
-        height: "100vh",
+        height: "100dvh",
         display: "flex",
         flexDirection: "column",
         background: "#f5f6f8",
@@ -239,12 +251,13 @@ export default function HomeClient({ snapshot }: Props) {
         onPeriodChange={setPeriod}
         okxStatus={okxStatus}
         onOpenWatchlist={() => setWatchlistOpen(true)}
+        isMobile={isMobile}
       />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, position: "relative" }}>
         <div
           ref={containerRef}
           style={{
-            flex: mainView === "chart" ? "0 0 0px" : mainView === "treemap" ? "1 1 0%" : "7 1 0%",
+            flex: mainView === "chart" ? "0 0 0px" : mainView === "treemap" ? "1 1 0%" : isMobile ? "5 1 0%" : "7 1 0%",
             position: "relative",
             minHeight: 0,
             overflow: mainView === "chart" ? "hidden" : "visible",
@@ -264,12 +277,12 @@ export default function HomeClient({ snapshot }: Props) {
         </div>
         <div
           style={{
-            flex: mainView === "treemap" ? "0 0 0px" : mainView === "chart" ? "1 1 0%" : "3 1 0%",
+            flex: mainView === "treemap" ? "0 0 0px" : mainView === "chart" ? "1 1 0%" : isMobile ? "5 1 0%" : "3 1 0%",
             minHeight: 0,
             overflow: mainView === "treemap" ? "hidden" : "auto",
           }}
         >
-          <TrendBarChart sectors={activeSnapshot.sectors} signals={signals} totalVolume={totalVolume} />
+          <TrendBarChart sectors={activeSnapshot.sectors} signals={signals} totalVolume={totalVolume} isMobile={isMobile} />
         </div>
 
         {/* View toggle — bottom-left corner */}
