@@ -7,7 +7,7 @@ import TrendBarChart from "@/components/TrendBarChart";
 import WatchlistEditor from "@/components/WatchlistEditor";
 import { loadWatchlist, toggleSector, resetWatchlist, filterSnapshotByWatchlist } from "@/lib/watchlist";
 import { fetchOkxSpotTickers, buildSnapshotFromOkx } from "@/lib/okx";
-import type { DailySnapshot, PeriodType, DataSource, WatchlistConfig, SectorConfig } from "@/lib/types";
+import type { DailySnapshot, PeriodType, WatchlistConfig, SectorConfig } from "@/lib/types";
 
 interface Props {
   snapshot: DailySnapshot;
@@ -20,7 +20,6 @@ export default function HomeClient({ snapshot }: Props) {
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [viewMode, setViewMode] = useState<"detailed" | "overview">("detailed");
   const [period, setPeriod] = useState<PeriodType>("24h");
-  const [dataSource, setDataSource] = useState<DataSource>("snapshot");
   const [okxData, setOkxData] = useState<DailySnapshot | null>(null);
   const [okxStatus, setOkxStatus] = useState<"idle" | "loading" | "live" | "error">("idle");
   const [watchlistOpen, setWatchlistOpen] = useState(false);
@@ -28,7 +27,7 @@ export default function HomeClient({ snapshot }: Props) {
     loadWatchlist(snapshot.sectors.map((s) => s.id)),
   );
 
-  // Size observer (same as before)
+  // Size observer
   useEffect(() => {
     let rafId: number;
     const updateSize = () => {
@@ -49,13 +48,13 @@ export default function HomeClient({ snapshot }: Props) {
     };
   }, []);
 
-  // Derive sector config from snapshot (for OKX merging)
+  // Sector config for OKX merging (derived from snapshot, stable across re-renders)
   const sectorConfig = useMemo<SectorConfig[]>(
     () => snapshot.sectors.map((s) => ({ id: s.id, name: s.name, coins: s.coins.map((c) => c.id) })),
     [snapshot],
   );
 
-  // Fetch OKX data — browser calls OKX directly (no Vercel proxy needed)
+  // Fetch OKX data directly from browser
   const fetchOkx = useCallback(async () => {
     setOkxStatus((prev) => (prev === "idle" ? "loading" : prev));
     try {
@@ -70,19 +69,12 @@ export default function HomeClient({ snapshot }: Props) {
     }
   }, [sectorConfig, snapshot]);
 
-  // Trigger OKX fetch when data source changes
+  // Fetch OKX immediately on mount, then auto-refresh
   useEffect(() => {
-    if (dataSource === "okx") {
-      fetchOkx();
-    }
-  }, [dataSource, fetchOkx]);
-
-  // Auto-refresh OKX every 30s
-  useEffect(() => {
-    if (dataSource !== "okx") return;
+    fetchOkx();
     const id = setInterval(fetchOkx, OKX_REFRESH_MS);
     return () => clearInterval(id);
-  }, [dataSource, fetchOkx]);
+  }, [fetchOkx]);
 
   // Handle watchlist toggle
   const handleWatchlistToggle = useCallback((sectorId: string) => {
@@ -93,16 +85,15 @@ export default function HomeClient({ snapshot }: Props) {
     setWatchlistConfig(resetWatchlist(snapshot.sectors.map((s) => s.id)));
   }, [snapshot.sectors]);
 
-  // Active snapshot: apply data source + watchlist filter
+  // Active snapshot: OKX real-time preferred, fallback to snapshot
   const activeSnapshot = useMemo(() => {
-    const raw = dataSource === "okx" && okxData ? okxData : snapshot;
+    const raw = okxData ?? snapshot;
     const filtered = filterSnapshotByWatchlist(raw, watchlistConfig);
-    // Update generatedAt for OKX mode to reflect fetch time
-    if (dataSource === "okx" && okxData) {
+    if (okxData) {
       return { ...filtered, generatedAt: okxData.generatedAt, source: okxData.source };
     }
     return filtered;
-  }, [dataSource, okxData, snapshot, watchlistConfig]);
+  }, [okxData, snapshot, watchlistConfig]);
 
   // Stats for Header
   const totalCoins = activeSnapshot.sectors.reduce((sum, s) => sum + s.coins.length, 0);
@@ -134,8 +125,6 @@ export default function HomeClient({ snapshot }: Props) {
         onViewModeChange={setViewMode}
         period={period}
         onPeriodChange={setPeriod}
-        dataSource={dataSource}
-        onDataSourceChange={setDataSource}
         okxStatus={okxStatus}
         onOpenWatchlist={() => setWatchlistOpen(true)}
       />

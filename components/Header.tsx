@@ -1,6 +1,6 @@
 "use client";
 
-import type { PeriodType, DataSource } from "@/lib/types";
+import type { PeriodType } from "@/lib/types";
 
 const PERIODS: { key: PeriodType; label: string }[] = [
   { key: "24h", label: "24h" },
@@ -17,8 +17,6 @@ interface Props {
   onViewModeChange: (mode: "detailed" | "overview") => void;
   period: PeriodType;
   onPeriodChange: (p: PeriodType) => void;
-  dataSource: DataSource;
-  onDataSourceChange: (s: DataSource) => void;
   okxStatus: "idle" | "loading" | "live" | "error";
   onOpenWatchlist: () => void;
 }
@@ -32,8 +30,6 @@ export default function Header({
   onViewModeChange,
   period,
   onPeriodChange,
-  dataSource,
-  onDataSourceChange,
   okxStatus,
   onOpenWatchlist,
 }: Props) {
@@ -108,42 +104,29 @@ export default function Header({
           ⚙
         </button>
 
-        {/* Data source toggle */}
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <div
+        {/* OKX live indicator */}
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
+            fontSize: 11,
+            color: "#6b7280",
+          }}
+        >
+          <span
             style={{
-              display: "inline-flex",
-              background: "#f5f6f8",
-              borderRadius: 8,
-              padding: 3,
+              width: 6,
+              height: 6,
+              borderRadius: 3,
+              background:
+                okxStatus === "live" ? "#38a169" :
+                okxStatus === "loading" ? "#f59e0b" :
+                okxStatus === "error" ? "#e53e3e" : "#d1d5db",
             }}
-          >
-            <ToggleButton
-              active={dataSource === "snapshot"}
-              onClick={() => onDataSourceChange("snapshot")}
-              label="快照"
-            />
-            <ToggleButton
-              active={dataSource === "okx"}
-              onClick={() => onDataSourceChange("okx")}
-              label="OKX"
-            />
-          </div>
-          {dataSource === "okx" && (
-            <span
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: 3,
-                background:
-                  okxStatus === "live" ? "#38a169" :
-                  okxStatus === "loading" ? "#f59e0b" :
-                  okxStatus === "error" ? "#e53e3e" : "#d1d5db",
-                flexShrink: 0,
-              }}
-            />
-          )}
-        </div>
+          />
+          OKX{okxStatus === "live" ? " 实时" : okxStatus === "loading" ? " 加载中" : okxStatus === "error" ? " 异常" : ""}
+        </span>
 
         {/* Period toggle */}
         <div
