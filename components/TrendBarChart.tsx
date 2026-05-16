@@ -15,12 +15,12 @@ const PAD = 12;
 const HEADER_H = 28;
 const TITLE_H = 32;
 const FOOTER_H = 36;
-const COL_GAP = 16;
+const COL_GAP = 1; // thin divider, not a gap
 
 const PERIODS = [
-  { key: "24h" as const, label: "24h" },
-  { key: "7d" as const, label: "7d" },
-  { key: "30d" as const, label: "30d" },
+  { key: "24h" as const, label: "24h 涨跌" },
+  { key: "7d" as const, label: "7d 涨跌" },
+  { key: "30d" as const, label: "30d 涨跌" },
 ];
 
 export default function TrendBarChart({ sectors }: Props) {
@@ -38,7 +38,6 @@ export default function TrendBarChart({ sectors }: Props) {
     return () => ro.disconnect();
   }, []);
 
-  // Compute rows: each sector has 3 return values
   const rows = useMemo(() => {
     const data = sectors.map((s) => ({
       id: s.id,
@@ -49,18 +48,15 @@ export default function TrendBarChart({ sectors }: Props) {
         hasData: hasSectorReturnForPeriod(s, p.key),
       })),
     }));
-    // Sort by 24h return descending
     data.sort((a, b) => b.values[0].value - a.values[0].value);
     return data;
   }, [sectors]);
 
   const chartH = TITLE_H + HEADER_H + rows.length * ROW_H + PAD + FOOTER_H;
 
-  // Column layout: 3 equal-width groups after the label area
-  const colW = width > 0 ? Math.max((width - LABEL_W - PAD * 2 - COL_GAP * 2) / 3, 40) : 40;
-  const NEG_RATIO = 0.4; // 40% of column width for negative side
+  const colW = width > 0 ? Math.max((width - LABEL_W - PAD * 2 - COL_GAP * 2) / 3, 60) : 60;
+  const NEG_RATIO = 0.4;
 
-  // Per-period max values for bar scaling
   const maxVals = PERIODS.map((p) => {
     const vals = rows
       .map((r) => r.values.find((v) => v.key === p.key)!)
@@ -74,6 +70,10 @@ export default function TrendBarChart({ sectors }: Props) {
     return <div ref={containerRef} style={{ width: "100%", height: "100%" }} />;
   }
 
+  const chartLeft = LABEL_W + PAD;
+  const chartRight = width - PAD;
+  const chartWidth = chartRight - chartLeft;
+
   return (
     <div
       ref={containerRef}
@@ -86,28 +86,73 @@ export default function TrendBarChart({ sectors }: Props) {
     >
       <svg width={width} height={chartH} style={{ display: "block" }}>
         {/* Title */}
-        <text x={PAD} y={20} fontSize={11} fontWeight={500} fill="#6b7280">
+        <text x={PAD} y={20} fontSize={12} fontWeight={600} fill="#1f2328">
           多时间维度板块对比
         </text>
-        <line x1={PAD} y1={26} x2={PAD} y2={26} stroke="#38a169" strokeWidth={0} />
+
+        {/* Unified panel background */}
+        <rect
+          x={chartLeft}
+          y={TITLE_H}
+          width={chartWidth}
+          height={HEADER_H + rows.length * ROW_H}
+          fill="#fafbfc"
+          stroke="#e5e7eb"
+          strokeWidth={1}
+          rx={4}
+        />
+
+        {/* Column dividers */}
+        {PERIODS.map((p, ci) => {
+          if (ci === 0) return null;
+          const divX = chartLeft + ci * colW + (ci - 1) * COL_GAP + COL_GAP / 2;
+          return (
+            <line
+              key={`div-${p.key}`}
+              x1={divX}
+              y1={TITLE_H}
+              x2={divX}
+              y2={TITLE_H + HEADER_H + rows.length * ROW_H}
+              stroke="#e5e7eb"
+              strokeWidth={1}
+            />
+          );
+        })}
+
+        {/* Header row background */}
+        <rect
+          x={chartLeft}
+          y={TITLE_H}
+          width={chartWidth}
+          height={HEADER_H}
+          fill="#f0f1f3"
+          rx={4}
+        />
+        {/* Mask bottom corners of header */}
+        <rect
+          x={chartLeft}
+          y={TITLE_H + HEADER_H - 4}
+          width={chartWidth}
+          height={4}
+          fill="#f0f1f3"
+        />
 
         {/* Column headers */}
         {PERIODS.map((p, ci) => {
-          const colStart = LABEL_W + PAD + ci * (colW + COL_GAP);
+          const colStart = chartLeft + ci * (colW + COL_GAP);
           const zeroX = colStart + colW * NEG_RATIO;
           return (
-            <g key={p.key}>
-              <text
-                x={zeroX}
-                y={TITLE_H + 14}
-                textAnchor="middle"
-                fontSize={11}
-                fontWeight={600}
-                fill="#6b7280"
-              >
-                {p.label}
-              </text>
-            </g>
+            <text
+              key={p.key}
+              x={zeroX}
+              y={TITLE_H + 17}
+              textAnchor="middle"
+              fontSize={11}
+              fontWeight={600}
+              fill="#4b5563"
+            >
+              {p.label}
+            </text>
           );
         })}
 
@@ -118,13 +163,13 @@ export default function TrendBarChart({ sectors }: Props) {
 
           return (
             <g key={row.id}>
-              {/* Background stripe */}
+              {/* Row stripe */}
               <rect
-                x={0}
+                x={chartLeft}
                 y={rowY}
-                width={width}
+                width={chartWidth}
                 height={ROW_H}
-                fill={ri % 2 === 0 ? "#ffffff" : "#fafbfc"}
+                fill={ri % 2 === 0 ? "#ffffff" : "#f8f9fb"}
               />
 
               {/* Sector name */}
@@ -143,23 +188,15 @@ export default function TrendBarChart({ sectors }: Props) {
               {/* Three period columns */}
               {PERIODS.map((p, ci) => {
                 const v = row.values[ci];
-                const colStart = LABEL_W + PAD + ci * (colW + COL_GAP);
+                const colStart = chartLeft + ci * (colW + COL_GAP);
                 const zeroX = colStart + colW * NEG_RATIO;
                 const barY = rowY + (ROW_H - BAR_H) / 2;
-                const negArea = colW * NEG_RATIO - 4; // 4px gap from edge
-                const posArea = colW * (1 - NEG_RATIO) - 4;
+                const negArea = colW * NEG_RATIO - 6;
+                const posArea = colW * (1 - NEG_RATIO) - 6;
 
                 if (!v.hasData) {
                   return (
                     <g key={p.key}>
-                      <line
-                        x1={colStart + 4}
-                        y1={labelY}
-                        x2={colStart + colW - 4}
-                        y2={labelY}
-                        stroke="#d1d5db"
-                        strokeWidth={1}
-                      />
                       <text
                         x={zeroX}
                         y={labelY}
@@ -184,26 +221,27 @@ export default function TrendBarChart({ sectors }: Props) {
 
                 if (v.value >= 0) {
                   barW = Math.max((absVal / maxVals[ci].pos) * posArea, absVal === 0 ? 0 : 3);
-                  barX = zeroX;
-                  pctX = barW > 50 ? zeroX + barW - 6 : zeroX + barW + 4;
+                  barX = zeroX + 2;
+                  pctX = barW > 50 ? zeroX + 2 + barW - 6 : zeroX + 2 + barW + 4;
                   pctAnchor = barW > 50 ? "end" : "start";
                 } else {
                   barW = Math.max((absVal / maxVals[ci].neg) * negArea, 3);
-                  barX = zeroX - barW;
-                  pctX = barW > 50 ? zeroX - barW + 6 : zeroX - barW - 4;
+                  barX = zeroX - 2 - barW;
+                  pctX = barW > 50 ? zeroX - 2 - barW + 6 : zeroX - 2 - barW - 4;
                   pctAnchor = barW > 50 ? "start" : "end";
                 }
 
                 return (
                   <g key={p.key}>
-                    {/* Zero line (subtle, per column) */}
+                    {/* Zero line */}
                     <line
                       x1={zeroX}
                       y1={rowY + 2}
                       x2={zeroX}
                       y2={rowY + ROW_H - 2}
-                      stroke="#e5e7eb"
+                      stroke="#d1d5db"
                       strokeWidth={1}
+                      strokeDasharray="3,3"
                     />
 
                     {/* Bar */}
