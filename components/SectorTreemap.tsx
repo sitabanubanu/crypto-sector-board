@@ -2,8 +2,8 @@
 
 import { useMemo, useRef, useState } from "react";
 import { hierarchy, treemap } from "d3-hierarchy";
-import type { DailySnapshot, SectorSnapshot, CoinSnapshot } from "@/lib/types";
-import { returnPctToColor, textColorOnBlock, formatPct, formatMarketCap } from "@/lib/colors";
+import type { DailySnapshot, SectorSnapshot, CoinSnapshot, PeriodType } from "@/lib/types";
+import { formatPct, formatMarketCap, getSectorReturn, getCoinReturn, sectorColorForPeriod, sectorTextColorForPeriod, coinColorForPeriod, coinTextColorForPeriod } from "@/lib/colors";
 
 type ViewMode = "detailed" | "overview";
 
@@ -12,6 +12,7 @@ interface Props {
   width: number;
   height: number;
   viewMode: ViewMode;
+  period: PeriodType;
 }
 
 interface HoverInfo {
@@ -21,7 +22,7 @@ interface HoverInfo {
   y: number;
 }
 
-export default function SectorTreemap({ snapshot, width, height, viewMode }: Props) {
+export default function SectorTreemap({ snapshot, width, height, viewMode, period }: Props) {
   const [hover, setHover] = useState<HoverInfo | null>(null);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -75,8 +76,8 @@ export default function SectorTreemap({ snapshot, width, height, viewMode }: Pro
       <svg width={width} height={height} style={{ display: "block" }}>
         {sectorNodes.map((sectorNode) => {
           const sector = (sectorNode.data as { sector?: SectorSnapshot }).sector!;
-          const sectorColor = returnPctToColor(sector.weightedReturnPct);
-          const sectorTextColor = textColorOnBlock(sector.weightedReturnPct);
+          const sectorColor = sectorColorForPeriod(sector, period);
+          const sectorTextColor = sectorTextColorForPeriod(sector, period);
           const sw = sectorNode.x1 - sectorNode.x0;
           const sh = sectorNode.y1 - sectorNode.y0;
           if (sw <= 0 || sh <= 0) return null;
@@ -116,7 +117,7 @@ export default function SectorTreemap({ snapshot, width, height, viewMode }: Pro
                   fill={sectorTextColor}
                   style={{ fontVariantNumeric: "tabular-nums" }}
                 >
-                  {formatPct(sector.weightedReturnPct)}
+                  {formatPct(getSectorReturn(sector, period))}
                 </text>
               </g>
             );
@@ -164,7 +165,7 @@ export default function SectorTreemap({ snapshot, width, height, viewMode }: Pro
                 fill={sectorTextColor}
                 style={{ fontVariantNumeric: "tabular-nums" }}
               >
-                {formatPct(sector.weightedReturnPct)}
+                {formatPct(getSectorReturn(sector, period))}
               </text>
 
               {(sectorNode.children || []).map((coinNode) => {
@@ -172,8 +173,8 @@ export default function SectorTreemap({ snapshot, width, height, viewMode }: Pro
                 const cw = coinNode.x1 - coinNode.x0;
                 const ch = coinNode.y1 - coinNode.y0;
                 if (cw <= 0 || ch <= 0) return null;
-                const coinColor = returnPctToColor(coin.returnPct);
-                const coinTextColor = textColorOnBlock(coin.returnPct);
+                const coinColor = coinColorForPeriod(coin, period);
+                const coinTextColor = coinTextColorForPeriod(coin, period);
                 const area = cw * ch;
                 const symbolSize = Math.max(10, Math.min(16, Math.sqrt(area) / 6.5));
                 const pctSize = Math.max(9, Math.min(13, symbolSize - 1));
@@ -245,7 +246,7 @@ export default function SectorTreemap({ snapshot, width, height, viewMode }: Pro
                             fill={coinTextColor}
                             style={{ fontVariantNumeric: "tabular-nums" }}
                           >
-                            {formatPct(coin.returnPct)}
+                            {formatPct(getCoinReturn(coin, period))}
                           </text>
                         )}
                       </>
@@ -258,12 +259,14 @@ export default function SectorTreemap({ snapshot, width, height, viewMode }: Pro
         })}
       </svg>
 
-      {hover && <Tooltip info={hover} />}
+      {hover && <Tooltip info={hover} period={period} />}
     </div>
   );
 }
 
-function Tooltip({ info }: { info: HoverInfo }) {
+const PERIOD_LABEL: Record<PeriodType, string> = { "24h": "24h 涨跌", "7d": "7d 涨跌", "30d": "30d 涨跌" };
+
+function Tooltip({ info, period }: { info: HoverInfo; period: PeriodType }) {
   const { coin, sectorName, x, y } = info;
   const offset = 12;
   const tooltipWidth = 240;
@@ -310,9 +313,9 @@ function Tooltip({ info }: { info: HoverInfo }) {
       <Row label="最低" value={`$${coin.low.toFixed(coin.low < 1 ? 6 : 2)}`} />
       <Row label="收盘" value={`$${coin.close.toFixed(coin.close < 1 ? 6 : 2)}`} />
       <Row
-        label="24h 涨跌"
-        value={formatPct(coin.returnPct)}
-        valueColor={returnPctToColor(coin.returnPct)}
+        label={PERIOD_LABEL[period]}
+        value={formatPct(getCoinReturn(coin, period))}
+        valueColor={coinColorForPeriod(coin, period)}
       />
       <Row label="振幅" value={`${(coin.amplitude * 100).toFixed(2)}%`} />
       <Row label="市值" value={formatMarketCap(coin.marketCap)} />

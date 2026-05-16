@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Header from "@/components/Header";
 import SectorTreemap from "@/components/SectorTreemap";
-import TrendPanel from "@/components/TrendPanel";
-import type { DailySnapshot } from "@/lib/types";
+import TrendBarChart from "@/components/TrendBarChart";
+import type { DailySnapshot, PeriodType } from "@/lib/types";
 
 interface Props {
   snapshot: DailySnapshot;
@@ -14,6 +14,7 @@ export default function HomeClient({ snapshot }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [viewMode, setViewMode] = useState<"detailed" | "overview">("detailed");
+  const [period, setPeriod] = useState<PeriodType>("24h");
 
   useEffect(() => {
     let rafId: number;
@@ -54,6 +55,8 @@ export default function HomeClient({ snapshot }: Props) {
         totalCoins={totalCoins}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
+        period={period}
+        onPeriodChange={setPeriod}
       />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
         <div ref={containerRef} style={{ flex: 7, position: "relative", minHeight: 0 }}>
@@ -63,11 +66,12 @@ export default function HomeClient({ snapshot }: Props) {
               width={size.width}
               height={size.height}
               viewMode={viewMode}
+              period={period}
             />
           )}
         </div>
         <div style={{ flex: 3, minHeight: 0, overflow: "auto" }}>
-          <TrendPanel sectors={snapshot.sectors} />
+          <TrendBarChart sectors={snapshot.sectors} period={period} />
         </div>
       </div>
     </div>

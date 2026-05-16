@@ -1,3 +1,5 @@
+export type PeriodType = "24h" | "7d" | "30d";
+
 export interface CoinSnapshot {
   id: string;
   symbol: string;

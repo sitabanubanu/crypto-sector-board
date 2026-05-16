@@ -1,5 +1,13 @@
 "use client";
 
+import type { PeriodType } from "@/lib/types";
+
+const PERIODS: { key: PeriodType; label: string }[] = [
+  { key: "24h", label: "24h" },
+  { key: "7d", label: "7d" },
+  { key: "30d", label: "30d" },
+];
+
 interface Props {
   date: string;
   generatedAt: string;
@@ -7,6 +15,8 @@ interface Props {
   totalCoins: number;
   viewMode: "detailed" | "overview";
   onViewModeChange: (mode: "detailed" | "overview") => void;
+  period: PeriodType;
+  onPeriodChange: (p: PeriodType) => void;
 }
 
 export default function Header({
@@ -16,6 +26,8 @@ export default function Header({
   totalCoins,
   viewMode,
   onViewModeChange,
+  period,
+  onPeriodChange,
 }: Props) {
   const formatGeneratedAt = (iso: string) => {
     const d = new Date(iso);
@@ -69,24 +81,44 @@ export default function Header({
         </div>
       </div>
 
-      <div
-        style={{
-          display: "inline-flex",
-          background: "#f5f6f8",
-          borderRadius: 8,
-          padding: 3,
-        }}
-      >
-        <ToggleButton
-          active={viewMode === "detailed"}
-          onClick={() => onViewModeChange("detailed")}
-          label="详细"
-        />
-        <ToggleButton
-          active={viewMode === "overview"}
-          onClick={() => onViewModeChange("overview")}
-          label="总览"
-        />
+      <div style={{ display: "flex", gap: 12 }}>
+        <div
+          style={{
+            display: "inline-flex",
+            background: "#f5f6f8",
+            borderRadius: 8,
+            padding: 3,
+          }}
+        >
+          {PERIODS.map((p) => (
+            <ToggleButton
+              key={p.key}
+              active={period === p.key}
+              onClick={() => onPeriodChange(p.key)}
+              label={p.label}
+            />
+          ))}
+        </div>
+
+        <div
+          style={{
+            display: "inline-flex",
+            background: "#f5f6f8",
+            borderRadius: 8,
+            padding: 3,
+          }}
+        >
+          <ToggleButton
+            active={viewMode === "detailed"}
+            onClick={() => onViewModeChange("detailed")}
+            label="详细"
+          />
+          <ToggleButton
+            active={viewMode === "overview"}
+            onClick={() => onViewModeChange("overview")}
+            label="总览"
+          />
+        </div>
       </div>
     </header>
   );
