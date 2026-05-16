@@ -71,7 +71,7 @@ export default function HomeClient({ snapshot }: Props) {
           )}
         </div>
         <div style={{ flex: 3, minHeight: 0, overflow: "auto" }}>
-          <TrendBarChart sectors={snapshot.sectors} period={period} />
+          <TrendBarChart sectors={snapshot.sectors} />
         </div>
       </div>
     </div>
