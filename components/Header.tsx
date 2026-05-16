@@ -1,6 +1,6 @@
 "use client";
 
-import type { PeriodType } from "@/lib/types";
+import type { PeriodType, DataSource } from "@/lib/types";
 
 const PERIODS: { key: PeriodType; label: string }[] = [
   { key: "24h", label: "24h" },
@@ -17,6 +17,10 @@ interface Props {
   onViewModeChange: (mode: "detailed" | "overview") => void;
   period: PeriodType;
   onPeriodChange: (p: PeriodType) => void;
+  dataSource: DataSource;
+  onDataSourceChange: (s: DataSource) => void;
+  okxStatus: "idle" | "loading" | "live" | "error";
+  onOpenWatchlist: () => void;
 }
 
 export default function Header({
@@ -28,6 +32,10 @@ export default function Header({
   onViewModeChange,
   period,
   onPeriodChange,
+  dataSource,
+  onDataSourceChange,
+  okxStatus,
+  onOpenWatchlist,
 }: Props) {
   const formatGeneratedAt = (iso: string) => {
     const d = new Date(iso);
@@ -81,7 +89,63 @@ export default function Header({
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 12 }}>
+      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+        {/* Edit watchlist button */}
+        <button
+          onClick={onOpenWatchlist}
+          title="编辑自选"
+          style={{
+            background: "#f5f6f8",
+            border: "none",
+            borderRadius: 8,
+            padding: "8px 10px",
+            cursor: "pointer",
+            fontSize: 15,
+            lineHeight: 1,
+            color: "#6b7280",
+          }}
+        >
+          ⚙
+        </button>
+
+        {/* Data source toggle */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div
+            style={{
+              display: "inline-flex",
+              background: "#f5f6f8",
+              borderRadius: 8,
+              padding: 3,
+            }}
+          >
+            <ToggleButton
+              active={dataSource === "snapshot"}
+              onClick={() => onDataSourceChange("snapshot")}
+              label="快照"
+            />
+            <ToggleButton
+              active={dataSource === "okx"}
+              onClick={() => onDataSourceChange("okx")}
+              label="OKX"
+            />
+          </div>
+          {dataSource === "okx" && (
+            <span
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: 3,
+                background:
+                  okxStatus === "live" ? "#38a169" :
+                  okxStatus === "loading" ? "#f59e0b" :
+                  okxStatus === "error" ? "#e53e3e" : "#d1d5db",
+                flexShrink: 0,
+              }}
+            />
+          )}
+        </div>
+
+        {/* Period toggle */}
         <div
           style={{
             display: "inline-flex",
@@ -100,6 +164,7 @@ export default function Header({
           ))}
         </div>
 
+        {/* View mode toggle */}
         <div
           style={{
             display: "inline-flex",

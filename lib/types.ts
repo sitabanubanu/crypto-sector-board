@@ -1,4 +1,5 @@
 export type PeriodType = "24h" | "7d" | "30d";
+export type DataSource = "snapshot" | "okx";
 
 export interface CoinSnapshot {
   id: string;
@@ -47,4 +48,16 @@ export interface SectorsFile {
   lastUpdated: string;
   mainStreamThreshold: number;
   sectors: SectorConfig[];
+}
+
+export interface WatchlistConfig {
+  sectors: Record<string, { enabled: boolean }>;
+}
+
+export interface OkxTicker {
+  instId: string;
+  last: string;
+  open24h: string;
+  high24h: string;
+  low24h: string;
 }
