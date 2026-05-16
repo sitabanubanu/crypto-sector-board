@@ -1,4 +1,4 @@
-import type { SectorConfig, CoinSnapshot, SectorSnapshot, DailySnapshot, OkxTicker } from "./types";
+import type { SectorConfig, CoinSnapshot, SectorSnapshot, DailySnapshot, OkxTicker, CustomSectorConfig } from "./types";
 import { calcWeightedSectorMetrics } from "./metrics";
 
 // CoinGecko coin ID → OKX spot instrument ID (USDT pairs)
@@ -182,4 +182,92 @@ export function buildSnapshotFromOkx(
     source: "okx",
     sectors: sectorSnapshots,
   };
+}
+
+export function getOkxUsdtSpotIds(okxData: Map<string, OkxTicker>): string[] {
+  const ids: string[] = [];
+  for (const instId of okxData.keys()) {
+    if (instId.endsWith("-USDT")) {
+      ids.push(instId);
+    }
+  }
+  ids.sort();
+  return ids;
+}
+
+export function buildCustomSectorsFromOkx(
+  customSectors: CustomSectorConfig[],
+  okxData: Map<string, OkxTicker>,
+  fallbackSnapshot: DailySnapshot,
+): SectorSnapshot[] {
+  // Build fallback lookup by uppercase symbol
+  const fallbackBySymbol = new Map<string, CoinSnapshot>();
+  for (const sector of fallbackSnapshot.sectors) {
+    for (const coin of sector.coins) {
+      fallbackBySymbol.set(coin.symbol.toUpperCase(), coin);
+    }
+  }
+
+  const result: SectorSnapshot[] = [];
+
+  for (const cs of customSectors) {
+    const coinSnapshots: CoinSnapshot[] = [];
+
+    for (const instId of cs.coins) {
+      const ticker = okxData.get(instId);
+      if (!ticker) {
+        console.warn(`Custom sector coin ${instId} not found in OKX data`);
+        continue;
+      }
+
+      const last = parseFloat(ticker.last);
+      const open24h = parseFloat(ticker.open24h);
+      const high24h = parseFloat(ticker.high24h);
+      const low24h = parseFloat(ticker.low24h);
+
+      const returnPct = open24h > 0 ? (last - open24h) / open24h : 0;
+      const amplitude = low24h > 0 ? high24h / low24h - 1 : 0;
+      const volatility = amplitude / 2;
+
+      // Extract symbol from instId: "BTC-USDT" → "BTC"
+      const symbol = instId.replace(/-USDT$/i, "");
+
+      const fallback = fallbackBySymbol.get(symbol.toUpperCase());
+
+      coinSnapshots.push({
+        id: `custom-${instId}`,
+        symbol,
+        name: fallback?.name ?? symbol,
+        marketCap: fallback?.marketCap ?? 1e9,
+        open: open24h,
+        high: high24h,
+        low: low24h,
+        close: last,
+        returnPct,
+        amplitude,
+        volatility,
+        returnPct7d: fallback?.returnPct7d,
+        returnPct30d: fallback?.returnPct30d,
+        isMainstream: true,
+      });
+    }
+
+    if (coinSnapshots.length === 0) {
+      // Sector with no valid coins — skip
+      continue;
+    }
+
+    const totalMarketCap = coinSnapshots.reduce((sum, c) => sum + c.marketCap, 0);
+    const weighted = calcWeightedSectorMetrics(coinSnapshots);
+
+    result.push({
+      id: cs.id,
+      name: cs.name,
+      totalMarketCap,
+      ...weighted,
+      coins: coinSnapshots,
+    });
+  }
+
+  return result;
 }

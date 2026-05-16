@@ -5,9 +5,22 @@ import Header from "@/components/Header";
 import SectorTreemap from "@/components/SectorTreemap";
 import TrendBarChart from "@/components/TrendBarChart";
 import WatchlistEditor from "@/components/WatchlistEditor";
-import { loadWatchlist, toggleSector, resetWatchlist, filterSnapshotByWatchlist } from "@/lib/watchlist";
-import { fetchOkxSpotTickers, buildSnapshotFromOkx } from "@/lib/okx";
-import type { DailySnapshot, PeriodType, WatchlistConfig, SectorConfig } from "@/lib/types";
+import {
+  loadWatchlist,
+  toggleSector,
+  resetWatchlist,
+  filterSnapshotByWatchlist,
+  addCustomSector,
+  updateCustomSector,
+  deleteCustomSector,
+} from "@/lib/watchlist";
+import {
+  fetchOkxSpotTickers,
+  buildSnapshotFromOkx,
+  buildCustomSectorsFromOkx,
+  getOkxUsdtSpotIds,
+} from "@/lib/okx";
+import type { DailySnapshot, PeriodType, WatchlistConfig, SectorConfig, OkxTicker, CustomSectorConfig } from "@/lib/types";
 
 interface Props {
   snapshot: DailySnapshot;
@@ -21,6 +34,7 @@ export default function HomeClient({ snapshot }: Props) {
   const [viewMode, setViewMode] = useState<"detailed" | "overview">("detailed");
   const [period, setPeriod] = useState<PeriodType>("24h");
   const [okxData, setOkxData] = useState<DailySnapshot | null>(null);
+  const [okxTickers, setOkxTickers] = useState<Map<string, OkxTicker> | null>(null);
   const [okxStatus, setOkxStatus] = useState<"idle" | "loading" | "live" | "error">("idle");
   const [watchlistOpen, setWatchlistOpen] = useState(false);
   const [watchlistConfig, setWatchlistConfig] = useState<WatchlistConfig>(() =>
@@ -48,17 +62,18 @@ export default function HomeClient({ snapshot }: Props) {
     };
   }, []);
 
-  // Sector config for OKX merging (derived from snapshot, stable across re-renders)
+  // Sector config for OKX merging
   const sectorConfig = useMemo<SectorConfig[]>(
     () => snapshot.sectors.map((s) => ({ id: s.id, name: s.name, coins: s.coins.map((c) => c.id) })),
     [snapshot],
   );
 
-  // Fetch OKX data directly from browser
+  // Fetch OKX data
   const fetchOkx = useCallback(async () => {
     setOkxStatus((prev) => (prev === "idle" ? "loading" : prev));
     try {
       const tickers = await fetchOkxSpotTickers();
+      setOkxTickers(tickers);
       const merged = buildSnapshotFromOkx(sectorConfig, tickers, snapshot);
       if (merged.sectors.length > 0) {
         setOkxData(merged);
@@ -69,14 +84,14 @@ export default function HomeClient({ snapshot }: Props) {
     }
   }, [sectorConfig, snapshot]);
 
-  // Fetch OKX immediately on mount, then auto-refresh
+  // Fetch OKX on mount + auto-refresh
   useEffect(() => {
     fetchOkx();
     const id = setInterval(fetchOkx, OKX_REFRESH_MS);
     return () => clearInterval(id);
   }, [fetchOkx]);
 
-  // Handle watchlist toggle
+  // Watchlist callbacks
   const handleWatchlistToggle = useCallback((sectorId: string) => {
     setWatchlistConfig((prev) => toggleSector(prev, sectorId));
   }, []);
@@ -85,26 +100,70 @@ export default function HomeClient({ snapshot }: Props) {
     setWatchlistConfig(resetWatchlist(snapshot.sectors.map((s) => s.id)));
   }, [snapshot.sectors]);
 
-  // Active snapshot: OKX real-time preferred, fallback to snapshot
+  // Custom sector callbacks
+  const handleAddCustomSector = useCallback((name: string, coins: string[]) => {
+    setWatchlistConfig((prev) => addCustomSector(prev, name, coins));
+  }, []);
+
+  const handleUpdateCustomSector = useCallback((id: string, name: string, coins: string[]) => {
+    setWatchlistConfig((prev) => updateCustomSector(prev, id, name, coins));
+  }, []);
+
+  const handleDeleteCustomSector = useCallback((id: string) => {
+    setWatchlistConfig((prev) => deleteCustomSector(prev, id));
+  }, []);
+
+  // Active snapshot: OKX real-time + custom sectors merged
   const activeSnapshot = useMemo(() => {
     const raw = okxData ?? snapshot;
     const filtered = filterSnapshotByWatchlist(raw, watchlistConfig);
-    if (okxData) {
-      return { ...filtered, generatedAt: okxData.generatedAt, source: okxData.source };
+
+    // Build custom sectors from OKX data
+    const customSectorsConfig = watchlistConfig.customSectors ?? [];
+    let customSectorSnapshots: DailySnapshot["sectors"] = [];
+    if (customSectorsConfig.length > 0 && okxTickers) {
+      const built = buildCustomSectorsFromOkx(customSectorsConfig, okxTickers, snapshot);
+      customSectorSnapshots = built.filter(
+        (s) => watchlistConfig.sectors[s.id]?.enabled !== false,
+      );
     }
-    return filtered;
-  }, [okxData, snapshot, watchlistConfig]);
+
+    return {
+      ...filtered,
+      sectors: [...filtered.sectors, ...customSectorSnapshots],
+      generatedAt: (okxData ?? filtered).generatedAt,
+      source: (okxData ?? filtered).source,
+    };
+  }, [okxData, okxTickers, snapshot, watchlistConfig]);
+
+  // Derived data for UI
+  const okxUsdtIds = useMemo(() => {
+    if (!okxTickers) return [] as string[];
+    return getOkxUsdtSpotIds(okxTickers);
+  }, [okxTickers]);
+
+  const customSectors: CustomSectorConfig[] = watchlistConfig.customSectors ?? [];
+
+  // Build metadata maps (names + coin counts) for ALL sectors including custom
+  const allSectorNames: Record<string, string> = {};
+  const allCoinCounts: Record<string, number> = {};
+  const allSectorIds: string[] = [];
+
+  // Built-in
+  for (const s of snapshot.sectors) {
+    allSectorNames[s.id] = s.name;
+    allCoinCounts[s.id] = s.coins.length;
+    allSectorIds.push(s.id);
+  }
+  // Custom
+  for (const cs of customSectors) {
+    allSectorNames[cs.id] = cs.name;
+    allCoinCounts[cs.id] = cs.coins.length;
+    allSectorIds.push(cs.id);
+  }
 
   // Stats for Header
   const totalCoins = activeSnapshot.sectors.reduce((sum, s) => sum + s.coins.length, 0);
-
-  // Watchlist editor metadata
-  const sectorNames: Record<string, string> = {};
-  const sectorCoinCounts: Record<string, number> = {};
-  for (const s of activeSnapshot.sectors) {
-    sectorNames[s.id] = s.name;
-    sectorCoinCounts[s.id] = s.coins.length;
-  }
 
   return (
     <div
@@ -147,13 +206,18 @@ export default function HomeClient({ snapshot }: Props) {
 
       <WatchlistEditor
         open={watchlistOpen}
-        sectorIds={snapshot.sectors.map((s) => s.id)}
-        sectorNames={sectorNames}
-        sectorCoinCounts={sectorCoinCounts}
+        sectorIds={allSectorIds}
+        sectorNames={allSectorNames}
+        sectorCoinCounts={allCoinCounts}
         config={watchlistConfig}
         onToggle={handleWatchlistToggle}
         onReset={handleWatchlistReset}
         onClose={() => setWatchlistOpen(false)}
+        okxInstIds={okxUsdtIds}
+        customSectors={customSectors}
+        onAddCustomSector={handleAddCustomSector}
+        onUpdateCustomSector={handleUpdateCustomSector}
+        onDeleteCustomSector={handleDeleteCustomSector}
       />
     </div>
   );

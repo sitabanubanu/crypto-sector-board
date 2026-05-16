@@ -50,8 +50,15 @@ export interface SectorsFile {
   sectors: SectorConfig[];
 }
 
+export interface CustomSectorConfig {
+  id: string;
+  name: string;
+  coins: string[]; // OKX instId, e.g. ["BTC-USDT", "ETH-USDT"]
+}
+
 export interface WatchlistConfig {
   sectors: Record<string, { enabled: boolean }>;
+  customSectors?: CustomSectorConfig[];
 }
 
 export interface OkxTicker {
