@@ -11,8 +11,8 @@ interface Props {
 
 const ROW_H = 32;
 const BAR_H = 20;
-const LABEL_W = 110;
-const PCT_W = 70;
+const LABEL_W = 100;
+const PCT_W = 72;
 const PAD = 12;
 const TITLE_H = 36;
 
@@ -104,7 +104,7 @@ export default function TrendBarChart({ sectors, period }: Props) {
             return (
               <g key={row.id}>
                 <text
-                  x={zeroX - 8}
+                  x={LABEL_W + PAD - 8}
                   y={labelY}
                   textAnchor="end"
                   dominantBaseline="middle"
@@ -141,20 +141,22 @@ export default function TrendBarChart({ sectors, period }: Props) {
           if (row.value >= 0) {
             barW = Math.max((row.value / maxPos) * posMax, row.value === 0 ? 0 : 3);
             barX = zeroX;
-            pctX = zeroX + barW + 6;
-            pctAnchor = "start";
+            // label inside bar (right) when wide enough, otherwise outside
+            pctX = barW > 56 ? zeroX + barW - 8 : zeroX + barW + 6;
+            pctAnchor = barW > 56 ? "end" : "start";
           } else {
             barW = Math.max((-row.value / maxNeg) * negMax, 3);
             barX = zeroX - barW;
-            pctX = zeroX - barW - 6;
-            pctAnchor = "end";
+            // label inside bar (left) when wide enough, otherwise outside
+            pctX = barW > 56 ? zeroX - barW + 8 : zeroX - barW - 6;
+            pctAnchor = barW > 56 ? "start" : "end";
           }
 
           return (
             <g key={row.id}>
               {/* sector name */}
               <text
-                x={zeroX - 8}
+                x={LABEL_W + PAD - 8}
                 y={labelY}
                 textAnchor="end"
                 dominantBaseline="middle"
