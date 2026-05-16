@@ -189,24 +189,34 @@ export default function HomeClient({ snapshot }: Props) {
         onOpenWatchlist={() => setWatchlistOpen(true)}
       />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, position: "relative" }}>
-        {mainView !== "chart" && (
-          <div ref={containerRef} style={{ flex: mainView === "treemap" ? 1 : 7, position: "relative", minHeight: 0 }}>
-            {size.width > 0 && size.height > 0 && (
-              <SectorTreemap
-                snapshot={activeSnapshot}
-                width={size.width}
-                height={size.height}
-                viewMode={viewMode}
-                period={period}
-              />
-            )}
-          </div>
-        )}
-        {mainView !== "treemap" && (
-          <div style={{ flex: mainView === "chart" ? 1 : 3, minHeight: 0, overflow: "auto" }}>
-            <TrendBarChart sectors={activeSnapshot.sectors} />
-          </div>
-        )}
+        <div
+          ref={containerRef}
+          style={{
+            flex: mainView === "chart" ? "0 0 0px" : mainView === "treemap" ? "1 1 0%" : "7 1 0%",
+            position: "relative",
+            minHeight: 0,
+            overflow: mainView === "chart" ? "hidden" : "visible",
+          }}
+        >
+          {size.width > 0 && size.height > 0 && (
+            <SectorTreemap
+              snapshot={activeSnapshot}
+              width={size.width}
+              height={size.height}
+              viewMode={viewMode}
+              period={period}
+            />
+          )}
+        </div>
+        <div
+          style={{
+            flex: mainView === "treemap" ? "0 0 0px" : mainView === "chart" ? "1 1 0%" : "3 1 0%",
+            minHeight: 0,
+            overflow: mainView === "treemap" ? "hidden" : "auto",
+          }}
+        >
+          <TrendBarChart sectors={activeSnapshot.sectors} />
+        </div>
 
         {/* View toggle — bottom-left corner */}
         <button
