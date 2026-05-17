@@ -307,7 +307,7 @@ export default function WatchlistEditor({
                             borderRadius: 4,
                           }}
                         >
-                          {instId.replace(/-USDT$/i, "")}
+                          {instId.replace(/[-_]USDT$/i, "")}
                         </span>
                       ))}
                     </div>
@@ -411,7 +411,7 @@ export default function WatchlistEditor({
                               e.currentTarget.style.background = "#fff";
                             }}
                           >
-                            <span style={{ fontWeight: 600 }}>{instId.replace(/-USDT$/i, "")}</span>
+                            <span style={{ fontWeight: 600 }}>{instId.replace(/[-_]USDT$/i, "")}</span>
                             <span style={{ color: "#9ca3af", fontSize: 10 }}>{instId}</span>
                           </div>
                         ))}
@@ -443,7 +443,7 @@ export default function WatchlistEditor({
                             fontWeight: 500,
                           }}
                         >
-                          {instId.replace(/-USDT$/i, "")}
+                          {instId.replace(/[-_]USDT$/i, "")}
                           <button
                             onClick={() =>
                               setEditorCoins((prev) => prev.filter((c) => c !== instId))
