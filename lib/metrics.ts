@@ -33,18 +33,23 @@ export function calcWeightedSectorMetrics(
   const weightedAmplitude = mainstream.reduce((sum, c) => sum + c.amplitude * c.marketCap, 0) / totalCap;
   const weightedVolatility = mainstream.reduce((sum, c) => sum + c.volatility * c.marketCap, 0) / totalCap;
 
-  const has3d = mainstream.some((c) => c.returnPct3d != null);
-  const has7d = mainstream.some((c) => c.returnPct7d != null);
-  const has30d = mainstream.some((c) => c.returnPct30d != null);
+  // 3d/7d/30d: only include coins that HAVE the data, so missing coins don't dilute the average toward 0
+  const with3d = mainstream.filter((c) => c.returnPct3d != null);
+  const with7d = mainstream.filter((c) => c.returnPct7d != null);
+  const with30d = mainstream.filter((c) => c.returnPct30d != null);
 
-  const weightedReturnPct3d = has3d
-    ? mainstream.reduce((sum, c) => sum + (c.returnPct3d ?? 0) * c.marketCap, 0) / totalCap
+  const cap3d = with3d.reduce((s, c) => s + c.marketCap, 0);
+  const cap7d = with7d.reduce((s, c) => s + c.marketCap, 0);
+  const cap30d = with30d.reduce((s, c) => s + c.marketCap, 0);
+
+  const weightedReturnPct3d = cap3d > 0
+    ? with3d.reduce((s, c) => s + c.returnPct3d! * c.marketCap, 0) / cap3d
     : undefined;
-  const weightedReturnPct7d = has7d
-    ? mainstream.reduce((sum, c) => sum + (c.returnPct7d ?? 0) * c.marketCap, 0) / totalCap
+  const weightedReturnPct7d = cap7d > 0
+    ? with7d.reduce((s, c) => s + c.returnPct7d! * c.marketCap, 0) / cap7d
     : undefined;
-  const weightedReturnPct30d = has30d
-    ? mainstream.reduce((sum, c) => sum + (c.returnPct30d ?? 0) * c.marketCap, 0) / totalCap
+  const weightedReturnPct30d = cap30d > 0
+    ? with30d.reduce((s, c) => s + c.returnPct30d! * c.marketCap, 0) / cap30d
     : undefined;
 
   return { weightedReturnPct, weightedAmplitude, weightedVolatility, weightedReturnPct3d, weightedReturnPct7d, weightedReturnPct30d };
