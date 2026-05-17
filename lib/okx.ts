@@ -145,8 +145,8 @@ export async function fetchOkxKlines(instIds: string[]): Promise<Map<string, num
 
   const result = new Map<string, number[]>();
   const unique = [...new Set(instIds)];
-  const BATCH = 4; // balance between speed and reliability
-  const BATCH_DELAY = 100; // ms between batches
+  const BATCH = 6;
+  const BATCH_DELAY = 50;
 
   for (let i = 0; i < unique.length; i += BATCH) {
     const batch = unique.slice(i, i + BATCH);
