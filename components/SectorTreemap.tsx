@@ -164,23 +164,25 @@ export default function SectorTreemap({ snapshot, width, height, viewMode, perio
               <text
                 x={sectorNode.x0 + 8}
                 y={sectorNode.y0 + 16}
-                fontSize={13}
+                fontSize={sw < 100 ? 10 : sw < 140 ? 11 : 13}
                 fontWeight={600}
                 fill={sectorTextColor}
               >
-                {sig ? `${sig.icon} ${sector.name}` : sector.name}
+                {sig ? (sw < 80 ? sig.icon : `${sig.icon} ${sector.name}`) : sector.name}
               </text>
-              <text
-                x={sectorNode.x0 + sw - 8}
-                y={sectorNode.y0 + 16}
-                textAnchor="end"
-                fontSize={13}
-                fontWeight={700}
-                fill={sectorTextColor}
-                style={{ fontVariantNumeric: "tabular-nums" }}
-              >
-                {formatPct(getSectorReturn(sector, period))}
-              </text>
+              {sw >= 70 && (
+                <text
+                  x={sectorNode.x0 + sw - 8}
+                  y={sectorNode.y0 + 16}
+                  textAnchor="end"
+                  fontSize={sw < 110 ? 10 : 13}
+                  fontWeight={700}
+                  fill={sectorTextColor}
+                  style={{ fontVariantNumeric: "tabular-nums" }}
+                >
+                  {formatPct(getSectorReturn(sector, period))}
+                </text>
+              )}
 
               {(sectorNode.children || []).map((coinNode) => {
                 const coin = (coinNode.data as { coin?: CoinSnapshot }).coin!;
