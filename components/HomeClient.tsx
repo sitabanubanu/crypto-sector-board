@@ -23,6 +23,7 @@ import {
   getGateUsdtSpotIds,
   CG_TO_GATE,
 } from "@/lib/gate";
+import { fetchOkxKlines, CG_TO_OKX } from "@/lib/okx";
 import { detectAllSignals } from "@/lib/signals";
 import type { DailySnapshot, PeriodType, WatchlistConfig, SectorConfig, CustomSectorConfig, CoinSnapshot, SectorSnapshot } from "@/lib/types";
 
@@ -117,6 +118,35 @@ export default function HomeClient({ snapshot }: Props) {
       const klines = needed.size > 0
         ? await fetchGateKlines([...needed])
         : new Map<string, number[]>();
+
+      // Fallback: for coins not on Gate.io (or where klines failed), try OKX
+      const okxNeeded = new Set<string>();
+      for (const sc of sectorConfig) {
+        for (const coinId of sc.coins) {
+          const gateId = CG_TO_GATE[coinId];
+          const okxId = CG_TO_OKX[coinId];
+          if (okxId) {
+            // Need OKX if: Gate mapping is null, or Gate klines failed
+            if (gateId === null || (gateId && !klines.has(gateId))) {
+              okxNeeded.add(okxId);
+            }
+          }
+        }
+      }
+      if (okxNeeded.size > 0) {
+        try {
+          const okxKlines = await fetchOkxKlines([...okxNeeded]);
+          // Merge: convert OKX instId format to Gate format (BTC-USDT → BTC_USDT)
+          for (const [okxInstId, closes] of okxKlines) {
+            const gateInstId = okxInstId.replace(/-/g, "_");
+            if (!klines.has(gateInstId)) {
+              klines.set(gateInstId, closes);
+            }
+          }
+        } catch {
+          // OKX fallback failed — use whatever Gate.io gave us
+        }
+      }
       setOkxKlines(klines);
 
       // Build snapshot with klines data
