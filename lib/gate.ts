@@ -178,6 +178,7 @@ export function buildSnapshotFromGate(
   gateData: Map<string, GateTicker>,
   fallbackSnapshot: DailySnapshot,
   klinesData?: Map<string, number[]>,
+  cgKlines?: Map<string, number[]>,
 ): DailySnapshot {
   const fallbackCoinMap = new Map<string, CoinSnapshot>();
   for (const sector of fallbackSnapshot.sectors) {
@@ -244,9 +245,22 @@ export function buildSnapshotFromGate(
         }
       }
 
-      // Fallback: use snapshot data entirely
+      // Fallback: use snapshot data entirely, enriched with CG klines if available
       if (fallback) {
-        coinSnapshots.push(fallback);
+        const cgCloses = cgKlines?.get(coinId);
+        if (cgCloses && cgCloses.length > 3) {
+          const last = fallback.close;
+          const returnPct3d = cgCloses[3] > 0 ? (last - cgCloses[3]) / cgCloses[3] : fallback.returnPct3d;
+          const returnPct7d = cgCloses.length > 7 && cgCloses[7] > 0
+            ? (last - cgCloses[7]) / cgCloses[7]
+            : fallback.returnPct7d;
+          const returnPct30d = cgCloses.length > 29 && cgCloses[29] > 0
+            ? (last - cgCloses[29]) / cgCloses[29]
+            : fallback.returnPct30d;
+          coinSnapshots.push({ ...fallback, returnPct3d, returnPct7d, returnPct30d });
+        } else {
+          coinSnapshots.push(fallback);
+        }
       } else {
         console.warn(`Coin ${coinId} not found in Gate.io or fallback snapshot`);
       }

@@ -24,6 +24,7 @@ import {
   CG_TO_GATE,
 } from "@/lib/gate";
 import { fetchOkxKlines, CG_TO_OKX } from "@/lib/okx";
+import { fetchCgKlines } from "@/lib/coingecko";
 import { detectAllSignals } from "@/lib/signals";
 import type { DailySnapshot, PeriodType, WatchlistConfig, SectorConfig, CustomSectorConfig, CoinSnapshot, SectorSnapshot } from "@/lib/types";
 
@@ -147,10 +148,31 @@ export default function HomeClient({ snapshot }: Props) {
           // OKX fallback failed — use whatever Gate.io gave us
         }
       }
+
+      // Second fallback: CoinGecko for coins not listed on either Gate.io or OKX (e.g. XMR, Aster)
+      const cgNeeded = new Set<string>();
+      for (const sc of sectorConfig) {
+        for (const coinId of sc.coins) {
+          const gateId = CG_TO_GATE[coinId];
+          const okxId = CG_TO_OKX[coinId];
+          // CG is needed only if neither exchange can serve this coin
+          if (gateId === null && okxId === null) {
+            cgNeeded.add(coinId);
+          }
+        }
+      }
+      let cgKlines: Map<string, number[]> | undefined;
+      if (cgNeeded.size > 0) {
+        try {
+          cgKlines = await fetchCgKlines([...cgNeeded]);
+        } catch {
+          // CG fallback failed — proceed without it
+        }
+      }
       setOkxKlines(klines);
 
       // Build snapshot with klines data
-      const merged = buildSnapshotFromGate(sectorConfig, tickers, snapshot, klines);
+      const merged = buildSnapshotFromGate(sectorConfig, tickers, snapshot, klines, cgKlines);
       if (merged.sectors.length > 0) {
         setOkxData(merged);
         setOkxStatus("live");

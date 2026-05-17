@@ -38,6 +38,62 @@ export interface CoinMarketItem {
   price_change_percentage_30d_in_currency: number | null;
 }
 
+// Fetch klines-like closes from CoinGecko market_chart (hourly prices).
+// Returns Map<coinId, closes[]> where closes are in descending order (index 0 = most recent).
+// Used as last-resort fallback for coins not listed on Gate.io or OKX (e.g. XMR, Aster).
+export async function fetchCgKlines(coinIds: string[]): Promise<Map<string, number[]>> {
+  const result = new Map<string, number[]>();
+  const unique = [...new Set(coinIds)];
+
+  // CoinGecko free API is very rate-limited — fetch sequentially with delay
+  for (let i = 0; i < unique.length; i++) {
+    const coinId = unique[i];
+    try {
+      const url = `/api/cg/coins/${coinId}/market_chart?vs_currency=usd&days=31`;
+      const res = await fetch(url);
+      if (!res.ok) {
+        console.warn(`CG klines ${coinId}: HTTP ${res.status}`);
+        continue;
+      }
+      const json = await res.json();
+      const prices: [number, number][] = json?.prices;
+      if (!Array.isArray(prices) || prices.length < 72) {
+        console.warn(`CG klines ${coinId}: insufficient data (${prices?.length ?? 0} points)`);
+        continue;
+      }
+
+      // prices are ascending by time. Find closest price to N days ago.
+      const latestTs = prices[prices.length - 1][0];
+      const targets = [0, 3, 7, 30].map((d) => latestTs - d * 86400000);
+
+      const closes: number[] = [];
+      for (const target of targets) {
+        let best = prices[0][1];
+        let bestDist = Infinity;
+        for (const [ts, price] of prices) {
+          const dist = Math.abs(ts - target);
+          if (dist < bestDist) {
+            bestDist = dist;
+            best = price;
+          }
+        }
+        closes.push(best);
+      }
+
+      result.set(coinId, closes);
+    } catch (e) {
+      console.warn(`CG klines ${coinId}: fetch error`, e);
+    }
+
+    // Rate-limit: CoinGecko free allows ~10-30 req/min. 3s between calls is safe.
+    if (i < unique.length - 1) {
+      await sleep(3000);
+    }
+  }
+
+  return result;
+}
+
 export async function fetchCoinsMarkets(coinIds: string[]): Promise<CoinMarketItem[]> {
   const batchSize = 50;
   const results: CoinMarketItem[] = [];
