@@ -114,6 +114,29 @@ export async function fetchOkxSpotTickers(): Promise<Map<string, OkxTicker>> {
 let _klinesCache: { data: Map<string, number[]>; ts: number } | null = null;
 const KLINES_CACHE_MS = 300000; // 5 minutes
 
+async function fetchOneKlines(instId: string): Promise<{ instId: string; closes: number[] }> {
+  const url = `/api/okx/market/candles?instId=${instId}&bar=1D&limit=31`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${instId} ${res.status}`);
+  const json = await res.json();
+  if (json.code !== "0" || !Array.isArray(json.data)) {
+    throw new Error(`${instId} code ${json.code}`);
+  }
+  return { instId, closes: json.data.map((c: string[]) => parseFloat(c[4])) };
+}
+
+async function fetchWithRetry(instId: string, retries = 2): Promise<{ instId: string; closes: number[] }> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fetchOneKlines(instId);
+    } catch (e) {
+      if (attempt === retries) throw e;
+      await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+    }
+  }
+  throw new Error("unreachable");
+}
+
 export async function fetchOkxKlines(instIds: string[]): Promise<Map<string, number[]>> {
   const now = Date.now();
   if (_klinesCache && now - _klinesCache.ts < KLINES_CACHE_MS) {
@@ -122,29 +145,23 @@ export async function fetchOkxKlines(instIds: string[]): Promise<Map<string, num
 
   const result = new Map<string, number[]>();
   const unique = [...new Set(instIds)];
-  const BATCH = 8;
+  const BATCH = 2; // small batches to avoid overwhelming the proxy
+  const BATCH_DELAY = 200; // ms between batches
 
   for (let i = 0; i < unique.length; i += BATCH) {
     const batch = unique.slice(i, i + BATCH);
     const responses = await Promise.allSettled(
-      batch.map(async (instId) => {
-        const url = `/api/okx/market/candles?instId=${instId}&bar=1D&limit=31`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`${instId} ${res.status}`);
-        const json = await res.json();
-        if (json.code !== "0" || !Array.isArray(json.data)) {
-          throw new Error(`${instId} code ${json.code}`);
-        }
-        // Each candle: [ts, open, high, low, close, vol, volCcy, ...]
-        // Return closes in descending time order (most recent first)
-        return { instId, closes: json.data.map((c: string[]) => parseFloat(c[4])) };
-      }),
+      batch.map((instId) => fetchWithRetry(instId)),
     );
 
     for (const r of responses) {
       if (r.status === "fulfilled") {
         result.set(r.value.instId, r.value.closes);
       }
+    }
+
+    if (i + BATCH < unique.length) {
+      await new Promise((r) => setTimeout(r, BATCH_DELAY));
     }
   }
 
