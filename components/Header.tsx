@@ -123,7 +123,7 @@ export default function Header({
           {!isMobile && (
             <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, color: "#6b7280" }}>
               <span style={{ width: 6, height: 6, borderRadius: 3, background: okxDotColor }} />
-              OKX{okxStatus === "live" ? " 实时" : okxStatus === "loading" ? " 加载中" : okxStatus === "error" ? " 异常" : ""}
+              Gate{okxStatus === "live" ? " 实时" : okxStatus === "loading" ? " 加载中" : okxStatus === "error" ? " 异常" : ""}
             </span>
           )}
         </div>

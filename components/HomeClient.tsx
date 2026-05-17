@@ -16,15 +16,15 @@ import {
   deleteCustomSector,
 } from "@/lib/watchlist";
 import {
-  fetchOkxSpotTickers,
-  fetchOkxKlines,
-  buildSnapshotFromOkx,
-  buildCustomSectorsFromOkx,
-  getOkxUsdtSpotIds,
-  CG_TO_OKX,
-} from "@/lib/okx";
+  fetchGateSpotTickers,
+  fetchGateKlines,
+  buildSnapshotFromGate,
+  buildCustomSectorsFromGate,
+  getGateUsdtSpotIds,
+  CG_TO_GATE,
+} from "@/lib/gate";
 import { detectAllSignals } from "@/lib/signals";
-import type { DailySnapshot, PeriodType, WatchlistConfig, SectorConfig, OkxTicker, CustomSectorConfig, CoinSnapshot, SectorSnapshot } from "@/lib/types";
+import type { DailySnapshot, PeriodType, WatchlistConfig, SectorConfig, CustomSectorConfig, CoinSnapshot, SectorSnapshot } from "@/lib/types";
 
 interface Props {
   snapshot: DailySnapshot;
@@ -50,7 +50,7 @@ export default function HomeClient({ snapshot }: Props) {
   const [viewMode, setViewMode] = useState<"detailed" | "overview">("detailed");
   const [period, setPeriod] = useState<PeriodType>("24h");
   const [okxData, setOkxData] = useState<DailySnapshot | null>(null);
-  const [okxTickers, setOkxTickers] = useState<Map<string, OkxTicker> | null>(null);
+  const [okxTickers, setOkxTickers] = useState<Map<string, { currency_pair: string; last: string; high_24h: string; low_24h: string; base_volume: string; quote_volume: string; change_percentage: string }> | null>(null);
   const [okxStatus, setOkxStatus] = useState<"idle" | "loading" | "live" | "error">("idle");
   const [okxKlines, setOkxKlines] = useState<Map<string, number[]> | null>(null);
   const [mainView, setMainView] = useState<"split" | "chart" | "treemap">("split");
@@ -96,31 +96,31 @@ export default function HomeClient({ snapshot }: Props) {
     [snapshot],
   );
 
-  // Fetch OKX data
+  // Fetch Gate.io data
   const fetchOkx = useCallback(async () => {
     setOkxStatus((prev) => (prev === "idle" ? "loading" : prev));
     try {
-      const tickers = await fetchOkxSpotTickers();
+      const tickers = await fetchGateSpotTickers();
       setOkxTickers(tickers);
 
       // Collect instIds only for coins we track (built-in + custom sectors)
       const needed = new Set<string>();
       for (const sc of sectorConfig) {
         for (const coinId of sc.coins) {
-          const okxId = CG_TO_OKX[coinId];
-          if (okxId) needed.add(okxId);
+          const gateId = CG_TO_GATE[coinId];
+          if (gateId) needed.add(gateId);
         }
       }
       for (const cs of watchlistConfig.customSectors ?? []) {
         for (const instId of cs.coins) needed.add(instId);
       }
       const klines = needed.size > 0
-        ? await fetchOkxKlines([...needed])
+        ? await fetchGateKlines([...needed])
         : new Map<string, number[]>();
       setOkxKlines(klines);
 
       // Build snapshot with klines data
-      const merged = buildSnapshotFromOkx(sectorConfig, tickers, snapshot, klines);
+      const merged = buildSnapshotFromGate(sectorConfig, tickers, snapshot, klines);
       if (merged.sectors.length > 0) {
         setOkxData(merged);
         setOkxStatus("live");
@@ -159,16 +159,16 @@ export default function HomeClient({ snapshot }: Props) {
     setWatchlistConfig((prev) => deleteCustomSector(prev, id));
   }, []);
 
-  // Active snapshot: OKX real-time + custom sectors merged
+  // Active snapshot: Gate.io real-time + custom sectors merged
   const activeSnapshot = useMemo(() => {
     const raw = okxData ?? snapshot;
     const filtered = filterSnapshotByWatchlist(raw, watchlistConfig);
 
-    // Build custom sectors from OKX data
+    // Build custom sectors from Gate.io data
     const customSectorsConfig = watchlistConfig.customSectors ?? [];
     let customSectorSnapshots: DailySnapshot["sectors"] = [];
     if (customSectorsConfig.length > 0 && okxTickers) {
-      const built = buildCustomSectorsFromOkx(customSectorsConfig, okxTickers, snapshot, okxKlines ?? undefined);
+      const built = buildCustomSectorsFromGate(customSectorsConfig, okxTickers, snapshot, okxKlines ?? undefined);
       customSectorSnapshots = built.filter(
         (s) => watchlistConfig.sectors[s.id]?.enabled !== false,
       );
@@ -202,9 +202,9 @@ export default function HomeClient({ snapshot }: Props) {
   }, [activeSnapshot.sectors, selectedCoin]);
 
   // Derived data for UI
-  const okxUsdtIds = useMemo(() => {
+  const gateUsdtIds = useMemo(() => {
     if (!okxTickers) return [] as string[];
-    return getOkxUsdtSpotIds(okxTickers);
+    return getGateUsdtSpotIds(okxTickers);
   }, [okxTickers]);
 
   const customSectors: CustomSectorConfig[] = watchlistConfig.customSectors ?? [];
@@ -325,7 +325,7 @@ export default function HomeClient({ snapshot }: Props) {
         onToggle={handleWatchlistToggle}
         onReset={handleWatchlistReset}
         onClose={() => setWatchlistOpen(false)}
-        okxInstIds={okxUsdtIds}
+        okxInstIds={gateUsdtIds}
         customSectors={customSectors}
         onAddCustomSector={handleAddCustomSector}
         onUpdateCustomSector={handleUpdateCustomSector}
