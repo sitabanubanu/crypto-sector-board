@@ -121,6 +121,18 @@ export default function HomeClient({ snapshot }: Props) {
 
       // Build snapshot with klines data
       const merged = buildSnapshotFromOkx(sectorConfig, tickers, snapshot, klines);
+
+      // DEBUG: log per-sector 3d data
+      console.log("=== OKX KLINES DEBUG ===");
+      console.log("Klines map size:", klines.size);
+      for (const sector of merged.sectors) {
+        const coins3d = sector.coins.filter((c) => c.returnPct3d != null);
+        const coinsNo3d = sector.coins.filter((c) => c.returnPct3d == null);
+        console.log(
+          `[${sector.name}] 3d=${(sector.weightedReturnPct3d ?? "undefined")} | coins_with_3d=${coins3d.map((c) => `${c.symbol}:${((c.returnPct3d ?? 0) * 100).toFixed(2)}%`).join(",")} | coins_without_3d=${coinsNo3d.map((c) => c.symbol).join(",")}`,
+        );
+      }
+      console.log("=== END DEBUG ===");
       if (merged.sectors.length > 0) {
         setOkxData(merged);
         setOkxStatus("live");
