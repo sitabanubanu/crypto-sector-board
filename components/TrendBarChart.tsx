@@ -82,6 +82,10 @@ export default function TrendBarChart({ sectors, signals, totalVolume, isMobile 
   const volDotMaxR = 5;
   const volDotMinR = 1.5;
 
+  // Debug: count sectors with 3d data
+  const sectorsWith3d = rows.filter((r) => r.values[1]?.hasData).length;
+  const sectorsWithout3d = rows.length - sectorsWith3d;
+
   if (width === 0) {
     return <div ref={containerRef} style={{ width: "100%", height: "100%" }} />;
   }
@@ -316,8 +320,8 @@ export default function TrendBarChart({ sectors, signals, totalVolume, isMobile 
         {/* Usage footer */}
         <text x={PAD} y={chartH - 12} fontSize={isMobile ? 8 : 10} fill="#9ca3af">
           {isMobile
-            ? "24h/3d/7d/30d 四列对比 · 圆点=成交量 · 🔥强 💰回 ⚠️诱 ❄️弱"
-            : "用法：四列同屏对比趋势。圆点大小=成交量占比。🔥强势确认 💰回调机会 ⚠️诱多陷阱 ❄️弱势回避"}
+            ? `24h/3d/7d/30d · 3d有数据:${sectorsWith3d}/无:${sectorsWithout3d}`
+            : `用法：四列同屏对比趋势。3d有数据=${sectorsWith3d} 无数据=${sectorsWithout3d} | 🔥强势确认 💰回调机会 ⚠️诱多陷阱 ❄️弱势回避`}
         </text>
       </svg>
     </div>
