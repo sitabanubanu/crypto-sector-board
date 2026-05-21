@@ -6,6 +6,8 @@ import SectorTreemap from "@/components/SectorTreemap";
 import TrendBarChart from "@/components/TrendBarChart";
 import WatchlistEditor from "@/components/WatchlistEditor";
 import CoinDetailModal from "@/components/CoinDetailModal";
+import PortfolioSummary from "@/components/PortfolioSummary";
+import CorrelationHeatmap from "@/components/CorrelationHeatmap";
 import {
   loadWatchlist,
   toggleSector,
@@ -26,10 +28,12 @@ import {
 import { fetchOkxKlines, CG_TO_OKX } from "@/lib/okx";
 import { fetchCgKlines } from "@/lib/coingecko";
 import { detectAllSignals } from "@/lib/signals";
+import { buildCorrelationMatrix } from "@/lib/correlation";
 import type { DailySnapshot, PeriodType, WatchlistConfig, SectorConfig, CustomSectorConfig, CoinSnapshot, SectorSnapshot } from "@/lib/types";
 
 interface Props {
   snapshot: DailySnapshot;
+  holdings: string[];
 }
 
 const OKX_REFRESH_MS = 30000;
@@ -45,7 +49,7 @@ function useIsMobile() {
   return isMobile;
 }
 
-export default function HomeClient({ snapshot }: Props) {
+export default function HomeClient({ snapshot, holdings }: Props) {
   const isMobile = useIsMobile();
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -237,6 +241,12 @@ export default function HomeClient({ snapshot }: Props) {
   // Sector rotation signals
   const signals = useMemo(() => detectAllSignals(activeSnapshot.sectors), [activeSnapshot.sectors]);
 
+  // Correlation matrix (computed from OKX klines)
+  const correlationMatrix = useMemo(() => {
+    if (!okxKlines || okxKlines.size === 0) return null;
+    return buildCorrelationMatrix(sectorConfig, okxKlines);
+  }, [okxKlines, sectorConfig]);
+
   // Total volume across all sectors for volume dot scaling
   const totalVolume = useMemo(
     () => activeSnapshot.sectors.reduce((sum, s) => sum + (s.totalVolume24h ?? 0), 0),
@@ -323,6 +333,7 @@ export default function HomeClient({ snapshot }: Props) {
               viewMode={viewMode}
               period={period}
               signals={signals}
+              holdings={holdings}
               onCoinClick={(coin, sectorName) => setSelectedCoin({ coin, sectorName })}
             />
           )}
@@ -367,6 +378,9 @@ export default function HomeClient({ snapshot }: Props) {
           {mainView === "split" ? "▣ 柱状图全屏" : mainView === "chart" ? "▦ 板块全屏" : "⊞ 分屏"}
         </button>
       </div>
+
+      <PortfolioSummary holdings={holdings} sectors={activeSnapshot.sectors} />
+      <CorrelationHeatmap matrix={correlationMatrix} isMobile={isMobile} />
 
       <WatchlistEditor
         open={watchlistOpen}

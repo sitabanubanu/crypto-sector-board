@@ -2,6 +2,7 @@
   "version": 1,
   "lastUpdated": "2026-05-15",
   "mainStreamThreshold": 300000000,
+  "holdings": [],
   "sectors": [
     {
       "id": "btc",

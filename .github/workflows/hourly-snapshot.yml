@@ -39,3 +39,11 @@ jobs:
       - name: Trigger Vercel deploy
         if: success()
         run: npx vercel deploy --prod --yes --token ${{ secrets.VERCEL_TOKEN }}
+
+      - name: Send Telegram summary
+        if: success()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          VERCEL_URL: ${{ vars.VERCEL_URL || '' }}
+        run: npm run telegram-push

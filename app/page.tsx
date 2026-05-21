@@ -1,10 +1,13 @@
 import HomeClient from "@/components/HomeClient";
 import { loadLatestSnapshot } from "@/lib/snapshot";
+import sectorsData from "@/data/sectors.json";
+import type { SectorsFile } from "@/lib/types";
 
 export const dynamic = "force-static";
 
 export default function Home() {
   const snapshot = loadLatestSnapshot();
+  const { holdings } = sectorsData as SectorsFile;
 
   if (!snapshot) {
     return (
@@ -24,5 +27,5 @@ export default function Home() {
     );
   }
 
-  return <HomeClient snapshot={snapshot} />;
+  return <HomeClient snapshot={snapshot} holdings={holdings ?? []} />;
 }

@@ -51,6 +51,7 @@ export interface SectorsFile {
   version: number;
   lastUpdated: string;
   mainStreamThreshold: number;
+  holdings?: string[];
   sectors: SectorConfig[];
 }
 

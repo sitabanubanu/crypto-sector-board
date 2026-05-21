@@ -15,6 +15,7 @@ interface Props {
   viewMode: ViewMode;
   period: PeriodType;
   signals?: Map<string, SectorSignal>;
+  holdings?: string[];
   onCoinClick?: (coin: CoinSnapshot, sectorName: string) => void;
 }
 
@@ -25,9 +26,10 @@ interface HoverInfo {
   y: number;
 }
 
-export default function SectorTreemap({ snapshot, width, height, viewMode, period, signals, onCoinClick }: Props) {
+export default function SectorTreemap({ snapshot, width, height, viewMode, period, signals, holdings, onCoinClick }: Props) {
   const [hover, setHover] = useState<HoverInfo | null>(null);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const holdingsSet = useMemo(() => new Set(holdings ?? []), [holdings]);
 
   const showHover = (info: HoverInfo) => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
@@ -245,6 +247,19 @@ export default function SectorTreemap({ snapshot, width, height, viewMode, perio
                         el.setAttribute("opacity", "1");
                       }}
                     />
+                    {/* Gold star for held coins */}
+                    {holdingsSet.has(coin.id) && cw > 16 && ch > 16 && (
+                      <text
+                        x={coinNode.x0 + cw - 4}
+                        y={coinNode.y0 + (cw < 32 ? 10 : 12)}
+                        textAnchor="end"
+                        fontSize={Math.min(cw < 30 ? 8 : 11, ch < 24 ? 8 : 11)}
+                        fill="#f59e0b"
+                        style={{ pointerEvents: "none" }}
+                      >
+                        ★
+                      </text>
+                    )}
                     {showText && (
                       <>
                         <text
