@@ -8,6 +8,9 @@ import WatchlistEditor from "@/components/WatchlistEditor";
 import CoinDetailModal from "@/components/CoinDetailModal";
 import PortfolioSummary from "@/components/PortfolioSummary";
 import CorrelationHeatmap from "@/components/CorrelationHeatmap";
+import SectorManager from "@/components/SectorManager";
+import BacktestPanel from "@/components/BacktestPanel";
+import sectorsFile from "@/data/sectors.json";
 import {
   loadWatchlist,
   toggleSector,
@@ -17,6 +20,7 @@ import {
   updateCustomSector,
   deleteCustomSector,
 } from "@/lib/watchlist";
+import { PRESETS, applyPreset } from "@/lib/presets";
 import {
   fetchGateSpotTickers,
   fetchGateKlines,
@@ -29,7 +33,7 @@ import { fetchOkxKlines, CG_TO_OKX } from "@/lib/okx";
 import { fetchCgKlines } from "@/lib/coingecko";
 import { detectAllSignals } from "@/lib/signals";
 import { buildCorrelationMatrix } from "@/lib/correlation";
-import type { DailySnapshot, PeriodType, WatchlistConfig, SectorConfig, CustomSectorConfig, CoinSnapshot, SectorSnapshot } from "@/lib/types";
+import type { DailySnapshot, PeriodType, WatchlistConfig, SectorConfig, CustomSectorConfig, CoinSnapshot, SectorSnapshot, SectorsFile } from "@/lib/types";
 
 interface Props {
   snapshot: DailySnapshot;
@@ -62,9 +66,16 @@ export default function HomeClient({ snapshot, holdings }: Props) {
   const [mainView, setMainView] = useState<"split" | "chart" | "treemap">("split");
   const [selectedCoin, setSelectedCoin] = useState<{ coin: CoinSnapshot; sectorName: string } | null>(null);
   const [watchlistOpen, setWatchlistOpen] = useState(false);
+  const [sectorManagerOpen, setSectorManagerOpen] = useState(false);
   const [watchlistConfig, setWatchlistConfig] = useState<WatchlistConfig>(() =>
     loadWatchlist(snapshot.sectors.map((s) => s.id)),
   );
+  const [activePreset, setActivePreset] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("sector-preset") || "all";
+    }
+    return "all";
+  });
 
   // Size observer — ResizeObserver on container + window resize fallback
   useEffect(() => {
@@ -202,6 +213,17 @@ export default function HomeClient({ snapshot, holdings }: Props) {
     setWatchlistConfig(resetWatchlist(snapshot.sectors.map((s) => s.id)));
   }, [snapshot.sectors]);
 
+  // Preset switch
+  const handlePresetChange = useCallback((presetId: string) => {
+    const preset = PRESETS.find((p) => p.id === presetId);
+    if (!preset) return;
+    setActivePreset(presetId);
+    localStorage.setItem("sector-preset", presetId);
+    setWatchlistConfig((prev) =>
+      applyPreset(prev, preset, snapshot.sectors.map((s) => s.id)),
+    );
+  }, [snapshot.sectors]);
+
   // Custom sector callbacks
   const handleAddCustomSector = useCallback((name: string, coins: string[]) => {
     setWatchlistConfig((prev) => addCustomSector(prev, name, coins));
@@ -313,7 +335,10 @@ export default function HomeClient({ snapshot, holdings }: Props) {
         onPeriodChange={setPeriod}
         okxStatus={okxStatus}
         onOpenWatchlist={() => setWatchlistOpen(true)}
+        onOpenSectorManager={() => setSectorManagerOpen(true)}
         isMobile={isMobile}
+        activePreset={activePreset}
+        onPresetChange={handlePresetChange}
       />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, position: "relative" }}>
         <div
@@ -381,6 +406,18 @@ export default function HomeClient({ snapshot, holdings }: Props) {
 
       <PortfolioSummary holdings={holdings} sectors={activeSnapshot.sectors} />
       <CorrelationHeatmap matrix={correlationMatrix} isMobile={isMobile} />
+      <BacktestPanel />
+
+      <SectorManager
+        open={sectorManagerOpen}
+        onClose={() => setSectorManagerOpen(false)}
+        sectorsData={sectorsFile as SectorsFile}
+        gateInstIds={gateUsdtIds}
+        onSaved={() => {
+          // Reload to pick up new sectors.json after Vercel rebuilds
+          setTimeout(() => window.location.reload(), 35000);
+        }}
+      />
 
       <WatchlistEditor
         open={watchlistOpen}
@@ -403,6 +440,10 @@ export default function HomeClient({ snapshot, holdings }: Props) {
           coin={selectedCoin.coin}
           sectorName={selectedCoin.sectorName}
           sector={coinSector}
+          closes={(() => {
+            const gateId = CG_TO_GATE[selectedCoin.coin.id];
+            return gateId ? okxKlines?.get(gateId) : undefined;
+          })()}
           onClose={() => setSelectedCoin(null)}
         />
       )}

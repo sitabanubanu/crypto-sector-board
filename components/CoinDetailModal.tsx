@@ -7,6 +7,7 @@ interface Props {
   coin: CoinSnapshot;
   sectorName: string;
   sector: SectorSnapshot;
+  closes?: number[]; // daily closes, most recent first (7-30 entries)
   onClose: () => void;
 }
 
@@ -29,7 +30,7 @@ function turnoverRatio(volume24h: number | undefined, marketCap: number): number
   return volume24h / marketCap;
 }
 
-export default function CoinDetailModal({ coin, sectorName, sector, onClose }: Props) {
+export default function CoinDetailModal({ coin, sectorName, sector, closes, onClose }: Props) {
   const turnover = turnoverRatio(coin.volume24h, coin.marketCap);
   const sectorTurnover = turnoverRatio(sector.totalVolume24h, sector.totalMarketCap);
 
@@ -156,6 +157,11 @@ export default function CoinDetailModal({ coin, sectorName, sector, onClose }: P
           </div>
         </div>
 
+        {/* Mini sparkline — 7 day price trend */}
+        {closes && closes.length >= 3 && (
+          <Sparkline closes={closes.slice(0, 7)} />
+        )}
+
         {/* Period returns */}
         <div style={{ padding: "14px 20px", borderBottom: "1px solid #f0f1f3" }}>
           {PERIODS.map((p) => {
@@ -230,5 +236,70 @@ export default function CoinDetailModal({ coin, sectorName, sector, onClose }: P
         </div>
       </div>
     </>
+  );
+}
+
+// Mini 7-day price sparkline
+function Sparkline({ closes }: { closes: number[] }) {
+  // closes are most recent first; reverse for chronological display
+  const data = [...closes].reverse();
+  const n = data.length;
+  const w = 320;
+  const h = 80;
+  const pad = { top: 12, right: 8, bottom: 16, left: 8 };
+  const plotW = w - pad.left - pad.right;
+  const plotH = h - pad.top - pad.bottom;
+
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const xScale = (i: number) => pad.left + (i / (n - 1)) * plotW;
+  const yScale = (v: number) => pad.top + plotH - ((v - min) / range) * plotH;
+
+  const points = data.map((v, i) => `${xScale(i)},${yScale(v)}`).join(" ");
+  const areaPoints = `${xScale(0)},${pad.top + plotH} ${points} ${xScale(n - 1)},${pad.top + plotH}`;
+  const trend = data[data.length - 1] >= data[0] ? "#fed7d7" : "#c6f6d5";
+  const trendStroke = data[data.length - 1] >= data[0] ? "#e53e3e" : "#38a169";
+
+  // Day labels (show every other day)
+  const days = data.map((_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (n - 1 - i));
+    return d.toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" });
+  });
+
+  return (
+    <div style={{ padding: "8px 20px", borderBottom: "1px solid #f0f1f3" }}>
+      <div style={{ fontSize: 10, color: "#9ca3af", marginBottom: 4 }}>近 {n} 天价格走势</div>
+      <svg width={w} height={h} style={{ display: "block", width: "100%", height: "auto" }}>
+        {/* Area fill */}
+        <polygon points={areaPoints} fill={trend} opacity={0.4} />
+        {/* Line */}
+        <polyline points={points} fill="none" stroke={trendStroke} strokeWidth={1.5} />
+        {/* Day labels */}
+        {days.map((label, i) => {
+          if (i % 2 !== 0 && i !== n - 1 && i !== 0) return null;
+          return (
+            <text
+              key={i}
+              x={xScale(i)}
+              y={h - 2}
+              textAnchor="middle"
+              fontSize={7}
+              fill="#9ca3af"
+            >
+              {label}
+            </text>
+          );
+        })}
+        {/* Min/Max labels */}
+        <text x={pad.left} y={pad.top - 2} fontSize={7} fill="#9ca3af">
+          ${max.toFixed(max < 1 ? 4 : 2)}
+        </text>
+        <text x={pad.left} y={pad.top + plotH - 2} fontSize={7} fill="#9ca3af">
+          ${min.toFixed(min < 1 ? 4 : 2)}
+        </text>
+      </svg>
+    </div>
   );
 }

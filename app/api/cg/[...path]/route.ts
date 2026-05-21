@@ -8,9 +8,12 @@ export async function GET(
   const query = new URL(req.url).search;
   const cgUrl = `https://api.coingecko.com/api/v3/${path.join("/")}${query}`;
 
-  const res = await fetch(cgUrl, {
-    headers: { "Content-Type": "application/json" },
-  });
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (process.env.COINGECKO_API_KEY) {
+    headers["x-cg-pro-api-key"] = process.env.COINGECKO_API_KEY;
+  }
+
+  const res = await fetch(cgUrl, { headers });
 
   const body = await res.text();
 

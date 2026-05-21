@@ -1,6 +1,7 @@
 "use client";
 
 import type { PeriodType } from "@/lib/types";
+import { PRESETS } from "@/lib/presets";
 
 const PERIODS: { key: PeriodType; label: string }[] = [
   { key: "24h", label: "24h" },
@@ -20,7 +21,10 @@ interface Props {
   onPeriodChange: (p: PeriodType) => void;
   okxStatus: "idle" | "loading" | "live" | "error";
   onOpenWatchlist: () => void;
+  onOpenSectorManager: () => void;
   isMobile: boolean;
+  activePreset: string;
+  onPresetChange: (id: string) => void;
 }
 
 export default function Header({
@@ -34,7 +38,10 @@ export default function Header({
   onPeriodChange,
   okxStatus,
   onOpenWatchlist,
+  onOpenSectorManager,
   isMobile,
+  activePreset,
+  onPresetChange,
 }: Props) {
   const formatGeneratedAt = (iso: string) => {
     const d = new Date(iso);
@@ -105,6 +112,22 @@ export default function Header({
             </span>
           )}
           <button
+            onClick={onOpenSectorManager}
+            title="编辑板块清单"
+            style={{
+              background: "#f5f6f8",
+              border: "none",
+              borderRadius: 8,
+              padding: isMobile ? "6px 8px" : "8px 10px",
+              cursor: "pointer",
+              fontSize: isMobile ? 13 : 15,
+              lineHeight: 1,
+              color: "#6b7280",
+            }}
+          >
+            ✎
+          </button>
+          <button
             onClick={onOpenWatchlist}
             title="编辑自选"
             style={{
@@ -127,6 +150,30 @@ export default function Header({
             </span>
           )}
         </div>
+      </div>
+
+      {/* Preset chips */}
+      <div style={{ display: "flex", gap: 4, alignItems: "center", flexWrap: "wrap" }}>
+        {PRESETS.map((p) => (
+          <button
+            key={p.id}
+            onClick={() => onPresetChange(p.id)}
+            title={p.description}
+            style={{
+              padding: isMobile ? "2px 7px" : "3px 10px",
+              fontSize: isMobile ? 10 : 11,
+              fontWeight: activePreset === p.id ? 600 : 400,
+              background: activePreset === p.id ? "#1f2328" : "#f5f6f8",
+              color: activePreset === p.id ? "#ffffff" : "#6b7280",
+              border: "none",
+              borderRadius: 10,
+              cursor: "pointer",
+              transition: "all 0.15s",
+            }}
+          >
+            {p.name}
+          </button>
+        ))}
       </div>
 
       {/* Bottom row: period + view mode toggles */}

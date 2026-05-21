@@ -6,8 +6,13 @@ function sleep(ms: number): Promise<void> {
 }
 
 async function fetchWithRetry(url: string, retries = 3): Promise<Response> {
+  const headers: Record<string, string> = {};
+  if (process.env.COINGECKO_API_KEY) {
+    headers["x-cg-pro-api-key"] = process.env.COINGECKO_API_KEY;
+  }
+
   for (let attempt = 0; attempt < retries; attempt++) {
-    const res = await fetch(url);
+    const res = await fetch(url, { headers });
     if (res.ok) return res;
     if (res.status === 429) {
       const wait = Math.pow(2, attempt + 1) * 2000;
