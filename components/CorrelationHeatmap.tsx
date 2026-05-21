@@ -33,18 +33,17 @@ function textColorForCorr(r: number): string {
 export default function CorrelationHeatmap({ matrix, isMobile }: Props) {
   const [open, setOpen] = useState(false);
 
-  if (!matrix) return null;
-
-  const n = matrix.sectorIds.length;
+  const n = matrix?.sectorIds.length ?? 0;
   const cellSize = isMobile ? 22 : 28;
   const labelW = isMobile ? 60 : 80;
   const pad = 4;
   const svgW = labelW + n * cellSize + pad;
   const svgH = 24 + n * cellSize + pad;
+  const hasData = matrix != null && n > 0;
 
   return (
     <>
-      {/* Toggle button */}
+      {/* Toggle button — always visible */}
       <button
         onClick={() => setOpen(!open)}
         style={{
@@ -57,7 +56,7 @@ export default function CorrelationHeatmap({ matrix, isMobile }: Props) {
           padding: "6px 12px",
           fontSize: 12,
           fontWeight: 600,
-          color: "#6b7280",
+          color: hasData ? "#6b7280" : "#d1d5db",
           cursor: "pointer",
           boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
           zIndex: 10,
@@ -118,76 +117,85 @@ export default function CorrelationHeatmap({ matrix, isMobile }: Props) {
                 ✕
               </button>
             </div>
-            <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 8 }}>
-              基于近 30 天日收益率计算 · Pearson 相关系数 · 红=正相关 绿=负相关
-            </div>
-            <svg width={svgW} height={svgH} style={{ display: "block" }}>
-              {/* Column labels */}
-              {matrix.sectorNames.map((name, i) => (
-                <text
-                  key={`col-${i}`}
-                  x={labelW + i * cellSize + cellSize / 2}
-                  y={12}
-                  textAnchor="middle"
-                  fontSize={9}
-                  fill="#6b7280"
-                  transform={`rotate(-45, ${labelW + i * cellSize + cellSize / 2}, 12)`}
-                >
-                  {name.length > 6 ? name.slice(0, 5) + "…" : name}
-                </text>
-              ))}
-              {/* Rows */}
-              {matrix.sectorNames.map((name, i) => (
-                <g key={`row-${i}`}>
-                  {/* Row label */}
-                  <text
-                    x={labelW - 4}
-                    y={24 + i * cellSize + cellSize / 2 + 2}
-                    textAnchor="end"
-                    dominantBaseline="middle"
-                    fontSize={9}
-                    fontWeight={600}
-                    fill="#4b5563"
-                  >
-                    {name.length > 6 ? name.slice(0, 5) + "…" : name}
-                  </text>
-                  {/* Cells */}
-                  {matrix.matrix[i].map((val, j) => (
-                    <g key={`cell-${i}-${j}`}>
-                      <rect
-                        x={labelW + j * cellSize}
-                        y={24 + i * cellSize}
-                        width={cellSize - 1}
-                        height={cellSize - 1}
-                        fill={corrColor(val)}
-                        rx={2}
-                      />
+
+            {!hasData ? (
+              <div style={{ textAlign: "center", padding: 40, color: "#9ca3af", fontSize: 12, lineHeight: 1.6 }}>
+                等待 30 天 K 线数据加载…
+                <br />
+                <span style={{ fontSize: 10 }}>（需要 Gate.io 实时连接成功后自动计算）</span>
+              </div>
+            ) : (
+              <>
+                <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 8 }}>
+                  基于近 30 天日收益率计算 · Pearson 相关系数 · 红=正相关 绿=负相关
+                </div>
+                <svg width={svgW} height={svgH} style={{ display: "block" }}>
+                  {/* Column labels */}
+                  {matrix.sectorNames.map((name, i) => (
+                    <text
+                      key={`col-${i}`}
+                      x={labelW + i * cellSize + cellSize / 2}
+                      y={12}
+                      textAnchor="middle"
+                      fontSize={9}
+                      fill="#6b7280"
+                      transform={`rotate(-45, ${labelW + i * cellSize + cellSize / 2}, 12)`}
+                    >
+                      {name.length > 6 ? name.slice(0, 5) + "…" : name}
+                    </text>
+                  ))}
+                  {/* Rows */}
+                  {matrix.sectorNames.map((name, i) => (
+                    <g key={`row-${i}`}>
                       <text
-                        x={labelW + j * cellSize + cellSize / 2}
-                        y={24 + i * cellSize + cellSize / 2 + 1}
-                        textAnchor="middle"
+                        x={labelW - 4}
+                        y={24 + i * cellSize + cellSize / 2 + 2}
+                        textAnchor="end"
                         dominantBaseline="middle"
                         fontSize={9}
-                        fontWeight={i === j ? 700 : 500}
-                        fill={textColorForCorr(val)}
+                        fontWeight={600}
+                        fill="#4b5563"
                       >
-                        {i === j ? "·" : (val * 100).toFixed(0)}
+                        {name.length > 6 ? name.slice(0, 5) + "…" : name}
                       </text>
+                      {matrix.matrix[i].map((val, j) => (
+                        <g key={`cell-${i}-${j}`}>
+                          <rect
+                            x={labelW + j * cellSize}
+                            y={24 + i * cellSize}
+                            width={cellSize - 1}
+                            height={cellSize - 1}
+                            fill={corrColor(val)}
+                            rx={2}
+                          />
+                          <text
+                            x={labelW + j * cellSize + cellSize / 2}
+                            y={24 + i * cellSize + cellSize / 2 + 1}
+                            textAnchor="middle"
+                            dominantBaseline="middle"
+                            fontSize={9}
+                            fontWeight={i === j ? 700 : 500}
+                            fill={textColorForCorr(val)}
+                          >
+                            {i === j ? "·" : (val * 100).toFixed(0)}
+                          </text>
+                        </g>
+                      ))}
                     </g>
                   ))}
-                </g>
-              ))}
-            </svg>
-            <div
-              style={{
-                marginTop: 8,
-                fontSize: 10,
-                color: "#9ca3af",
-                lineHeight: 1.6,
-              }}
-            >
-              提示：相关性 &gt; 0.7 的板块同涨同跌，分散持仓时尽量避开高度相关的板块组合
-            </div>
+                </svg>
+                <div
+                  style={{
+                    marginTop: 8,
+                    fontSize: 10,
+                    color: "#9ca3af",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  提示：相关性 &gt; 0.7 的板块同涨同跌，分散持仓时尽量避开高度相关的板块组合
+                </div>
+              </>
+            )}
           </div>
         </>
       )}

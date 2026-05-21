@@ -10,9 +10,7 @@ interface Props {
 }
 
 export default function PortfolioSummary({ holdings, sectors }: Props) {
-  const [collapsed, setCollapsed] = useState(false);
-
-  if (holdings.length === 0) return null;
+  const [collapsed, setCollapsed] = useState(true);
 
   // Find held coins across all sectors
   const heldCoins: { coin: CoinSnapshot; sectorName: string }[] = [];
@@ -23,7 +21,7 @@ export default function PortfolioSummary({ holdings, sectors }: Props) {
       }
     }
   }
-  if (heldCoins.length === 0) return null;
+  const hasHoldings = heldCoins.length > 0;
 
   const totalValue = heldCoins.reduce((sum, h) => sum + h.coin.marketCap, 0);
   const weightedReturn = totalValue > 0
@@ -64,7 +62,7 @@ export default function PortfolioSummary({ holdings, sectors }: Props) {
           fontSize: 13,
         }}
       >
-        <span>★ 持仓概览</span>
+        <span>★ {hasHoldings ? "持仓概览" : "添加持仓"}</span>
         <span style={{ fontSize: 10, opacity: 0.8 }}>
           {collapsed ? "展开" : "收起"}
         </span>
@@ -72,77 +70,86 @@ export default function PortfolioSummary({ holdings, sectors }: Props) {
 
       {!collapsed && (
         <div style={{ padding: "8px 0", maxHeight: 360, overflow: "auto" }}>
-          {/* Summary row */}
-          <div
-            style={{
-              padding: "6px 12px",
-              display: "flex",
-              justifyContent: "space-between",
-              borderBottom: "1px solid #f0f1f3",
-              fontWeight: 600,
-            }}
-          >
-            <span style={{ color: "#6b7280" }}>总市值</span>
-            <span style={{ color: "#1f2328" }}>{formatMarketCap(totalValue)}</span>
-          </div>
-          <div
-            style={{
-              padding: "6px 12px",
-              display: "flex",
-              justifyContent: "space-between",
-              borderBottom: "1px solid #e5e7eb",
-              fontWeight: 600,
-            }}
-          >
-            <span style={{ color: "#6b7280" }}>24h 加权涨跌</span>
-            <span
-              style={{
-                color: weightedReturn >= 0 ? "#e53e3e" : "#38a169",
-              }}
-            >
-              {formatPct(weightedReturn)}
-            </span>
-          </div>
-
-          {/* Individual coins */}
-          {heldCoins
-            .sort((a, b) => b.coin.returnPct - a.coin.returnPct)
-            .map((h) => (
+          {!hasHoldings ? (
+            <div style={{ padding: "12px", fontSize: 11, color: "#9ca3af", lineHeight: 1.6 }}>
+              在 <code style={{ background: "#f5f6f8", padding: "1px 4px", borderRadius: 3 }}>data/sectors.json</code> 的
+              <code style={{ background: "#f5f6f8", padding: "1px 4px", borderRadius: 3 }}>holdings</code> 数组中填入币种 ID（如 bitcoin、ethereum），开启持仓标记。
+            </div>
+          ) : (
+            <>
+              {/* Summary row */}
               <div
-                key={h.coin.id}
                 style={{
-                  padding: "5px 12px",
+                  padding: "6px 12px",
                   display: "flex",
                   justifyContent: "space-between",
-                  alignItems: "center",
-                  borderBottom: "1px solid #f5f6f8",
+                  borderBottom: "1px solid #f0f1f3",
+                  fontWeight: 600,
                 }}
               >
-                <div>
-                  <span style={{ fontWeight: 600, fontSize: 11 }}>
-                    {h.coin.symbol}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: 9,
-                      color: "#9ca3af",
-                      marginLeft: 6,
-                    }}
-                  >
-                    {h.sectorName}
-                  </span>
-                </div>
+                <span style={{ color: "#6b7280" }}>总市值</span>
+                <span style={{ color: "#1f2328" }}>{formatMarketCap(totalValue)}</span>
+              </div>
+              <div
+                style={{
+                  padding: "6px 12px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  borderBottom: "1px solid #e5e7eb",
+                  fontWeight: 600,
+                }}
+              >
+                <span style={{ color: "#6b7280" }}>24h 加权涨跌</span>
                 <span
                   style={{
-                    fontWeight: 600,
-                    fontSize: 11,
-                    color: h.coin.returnPct >= 0 ? "#e53e3e" : "#38a169",
+                    color: weightedReturn >= 0 ? "#e53e3e" : "#38a169",
                   }}
                 >
-                  {formatPct(h.coin.returnPct)}
+                  {formatPct(weightedReturn)}
                 </span>
               </div>
-            ))}
+
+              {/* Individual coins */}
+              {heldCoins
+                .sort((a, b) => b.coin.returnPct - a.coin.returnPct)
+                .map((h) => (
+                  <div
+                    key={h.coin.id}
+                    style={{
+                      padding: "5px 12px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      borderBottom: "1px solid #f5f6f8",
+                    }}
+                  >
+                    <div>
+                      <span style={{ fontWeight: 600, fontSize: 11 }}>
+                        {h.coin.symbol}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 9,
+                          color: "#9ca3af",
+                          marginLeft: 6,
+                        }}
+                      >
+                        {h.sectorName}
+                      </span>
+                    </div>
+                    <span
+                      style={{
+                        fontWeight: 600,
+                        fontSize: 11,
+                        color: h.coin.returnPct >= 0 ? "#e53e3e" : "#38a169",
+                      }}
+                    >
+                      {formatPct(h.coin.returnPct)}
+                    </span>
+                  </div>
+                ))}
+            </>
+          )}
         </div>
       )}
     </div>
