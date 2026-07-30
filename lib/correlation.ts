@@ -1,5 +1,4 @@
-import type { SectorSnapshot, SectorConfig } from "./types";
-import { CG_TO_GATE } from "./gate";
+import type { SectorConfig } from "./types";
 
 // Daily return series for one sector (most recent first)
 function sectorDailyReturns(
@@ -8,9 +7,7 @@ function sectorDailyReturns(
 ): number[] | null {
   const series: number[][] = [];
   for (const coinId of sector.coins) {
-    const gateId = CG_TO_GATE[coinId];
-    if (!gateId) continue;
-    const closes = klines.get(gateId);
+    const closes = klines.get(coinId);
     if (!closes || closes.length < 5) continue;
     // Convert closes to daily returns (most recent at index 0)
     const returns: number[] = [];

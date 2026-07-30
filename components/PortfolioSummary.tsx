@@ -23,10 +23,25 @@ export default function PortfolioSummary({ holdings, sectors }: Props) {
   }
   const hasHoldings = heldCoins.length > 0;
 
-  const totalValue = heldCoins.reduce((sum, h) => sum + h.coin.marketCap, 0);
-  const weightedReturn = totalValue > 0
-    ? heldCoins.reduce((sum, h) => sum + h.coin.returnPct * h.coin.marketCap, 0) / totalValue
-    : 0;
+  const totalValue = heldCoins.reduce((sum, h) => sum + (h.coin.marketCap ?? 0), 0);
+  const weightedCoins = heldCoins.filter(
+    (holding) =>
+      holding.coin.marketCap != null &&
+      holding.coin.marketCap > 0 &&
+      holding.coin.returnPct != null,
+  );
+  const coveredValue = weightedCoins.reduce(
+    (sum, holding) => sum + holding.coin.marketCap!,
+    0,
+  );
+  const weightedReturn =
+    coveredValue > 0
+      ? weightedCoins.reduce(
+          (sum, holding) =>
+            sum + holding.coin.returnPct! * holding.coin.marketCap!,
+          0,
+        ) / coveredValue
+      : null;
 
   return (
     <div
@@ -102,7 +117,12 @@ export default function PortfolioSummary({ holdings, sectors }: Props) {
                 <span style={{ color: "#6b7280" }}>24h 加权涨跌</span>
                 <span
                   style={{
-                    color: weightedReturn >= 0 ? "#e53e3e" : "#38a169",
+                    color:
+                      weightedReturn == null
+                        ? "#9ca3af"
+                        : weightedReturn >= 0
+                          ? "#e53e3e"
+                          : "#38a169",
                   }}
                 >
                   {formatPct(weightedReturn)}
@@ -111,7 +131,11 @@ export default function PortfolioSummary({ holdings, sectors }: Props) {
 
               {/* Individual coins */}
               {heldCoins
-                .sort((a, b) => b.coin.returnPct - a.coin.returnPct)
+                .sort(
+                  (a, b) =>
+                    (b.coin.returnPct ?? Number.NEGATIVE_INFINITY) -
+                    (a.coin.returnPct ?? Number.NEGATIVE_INFINITY),
+                )
                 .map((h) => (
                   <div
                     key={h.coin.id}
@@ -141,7 +165,12 @@ export default function PortfolioSummary({ holdings, sectors }: Props) {
                       style={{
                         fontWeight: 600,
                         fontSize: 11,
-                        color: h.coin.returnPct >= 0 ? "#e53e3e" : "#38a169",
+                        color:
+                          h.coin.returnPct == null
+                            ? "#9ca3af"
+                            : h.coin.returnPct >= 0
+                              ? "#e53e3e"
+                              : "#38a169",
                       }}
                     >
                       {formatPct(h.coin.returnPct)}

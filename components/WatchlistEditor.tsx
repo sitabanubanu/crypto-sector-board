@@ -1,7 +1,12 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useReducer } from "react";
 import type { WatchlistConfig, CustomSectorConfig } from "@/lib/types";
+import type { PublicAsset } from "@/lib/market-data/bff-contracts";
+import {
+  createCustomSectorEditorState,
+  customSectorEditorReducer,
+} from "@/lib/watchlist-editor";
 
 interface Props {
   open: boolean;
@@ -12,8 +17,7 @@ interface Props {
   onToggle: (sectorId: string) => void;
   onReset: () => void;
   onClose: () => void;
-  // Custom sector props
-  okxInstIds: string[];
+  assets: PublicAsset[];
   customSectors: CustomSectorConfig[];
   onAddCustomSector: (name: string, coins: string[]) => void;
   onUpdateCustomSector: (id: string, name: string, coins: string[]) => void;
@@ -31,7 +35,7 @@ export default function WatchlistEditor({
   onToggle,
   onReset,
   onClose,
-  okxInstIds,
+  assets,
   customSectors,
   onAddCustomSector,
   onUpdateCustomSector,
@@ -39,69 +43,71 @@ export default function WatchlistEditor({
 }: Props) {
   const [tab, setTab] = useState<TabKey>("builtin");
 
-  // Inline editor state
-  const [editingId, setEditingId] = useState<string | null>(null); // null = adding new, string = editing existing
-  const [editorName, setEditorName] = useState("");
-  const [editorCoins, setEditorCoins] = useState<string[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [editor, dispatchEditor] = useReducer(
+    customSectorEditorReducer,
+    undefined,
+    createCustomSectorEditorState,
+  );
   const searchInputRef = useRef<HTMLInputElement>(null);
-
-  const isEditing = editingId !== null;
-  const isAdding = editingId === null && editorCoins.length >= 0;
+  const assetsById = useMemo(
+    () => new Map(assets.map((asset) => [asset.assetId, asset])),
+    [assets],
+  );
 
   // Filtered search results
   const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return [];
-    const q = searchQuery.toUpperCase();
-    return okxInstIds
-      .filter((id) => id.toUpperCase().includes(q) && !editorCoins.includes(id))
+    if (!editor.query.trim()) return [];
+    const q = editor.query.trim().toLowerCase();
+    return assets
+      .filter(
+        (asset) =>
+          !editor.coins.includes(asset.assetId) &&
+          [asset.assetId, asset.symbol, asset.name].some((value) =>
+            value.toLowerCase().includes(q),
+          ),
+      )
       .slice(0, 10);
-  }, [searchQuery, okxInstIds, editorCoins]);
+  }, [assets, editor.query, editor.coins]);
 
   // Start adding a new sector
   const startAdd = () => {
-    setEditingId(null);
-    setEditorName("");
-    setEditorCoins([]);
-    setSearchQuery("");
+    dispatchEditor({ type: "start_add" });
     setTimeout(() => searchInputRef.current?.focus(), 100);
   };
 
   // Start editing an existing sector
   const startEdit = (cs: CustomSectorConfig) => {
-    setEditingId(cs.id);
-    setEditorName(cs.name);
-    setEditorCoins([...cs.coins]);
-    setSearchQuery("");
+    dispatchEditor({ type: "start_edit", sector: cs });
     setTimeout(() => searchInputRef.current?.focus(), 100);
   };
 
   // Cancel editing
   const cancelEdit = () => {
-    setEditingId(null);
-    setEditorName("");
-    setEditorCoins([]);
-    setSearchQuery("");
+    dispatchEditor({ type: "close" });
   };
 
   // Save
   const handleSave = () => {
-    const name = editorName.trim();
-    if (!name || editorCoins.length === 0) return;
-    if (editingId) {
-      onUpdateCustomSector(editingId, name, editorCoins);
-    } else {
-      onAddCustomSector(name, editorCoins);
+    const name = editor.name.trim();
+    if (!name || editor.coins.length === 0) return;
+    if (editor.mode.kind === "editing") {
+      onUpdateCustomSector(editor.mode.sectorId, name, editor.coins);
+    } else if (editor.mode.kind === "adding") {
+      onAddCustomSector(name, editor.coins);
     }
     cancelEdit();
   };
 
   // Focus search input when editor opens
   useEffect(() => {
-    if (editingId !== undefined) {
+    if (editor.mode.kind !== "closed") {
       searchInputRef.current?.focus();
     }
-  }, [editingId]);
+  }, [editor.mode]);
+
+  useEffect(() => {
+    if (!open) dispatchEditor({ type: "close" });
+  }, [open]);
 
   if (!open) return null;
 
@@ -296,9 +302,9 @@ export default function WatchlistEditor({
                       </button>
                     </div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 4, paddingLeft: 40 }}>
-                      {cs.coins.map((instId) => (
+                      {cs.coins.map((assetId) => (
                         <span
-                          key={instId}
+                          key={assetId}
                           style={{
                             fontSize: 10,
                             background: enabled ? "#f0f1f3" : "#f9fafb",
@@ -307,7 +313,7 @@ export default function WatchlistEditor({
                             borderRadius: 4,
                           }}
                         >
-                          {instId.replace(/[-_]USDT$/i, "")}
+                          {assetsById.get(assetId)?.symbol ?? assetId}
                         </span>
                       ))}
                     </div>
@@ -316,7 +322,7 @@ export default function WatchlistEditor({
               })}
 
               {/* Inline editor */}
-              {editingId !== undefined && (
+              {editor.mode.kind !== "closed" && (
                 <div
                   style={{
                     margin: "8px 16px",
@@ -328,8 +334,10 @@ export default function WatchlistEditor({
                 >
                   {/* Name input */}
                   <input
-                    value={editorName}
-                    onChange={(e) => setEditorName(e.target.value)}
+                    value={editor.name}
+                    onChange={(e) =>
+                      dispatchEditor({ type: "set_name", name: e.target.value })
+                    }
                     placeholder="板块名称"
                     style={{
                       width: "100%",
@@ -353,8 +361,10 @@ export default function WatchlistEditor({
                   <div style={{ position: "relative" }}>
                     <input
                       ref={searchInputRef}
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      value={editor.query}
+                      onChange={(e) =>
+                        dispatchEditor({ type: "set_query", query: e.target.value })
+                      }
                       placeholder="搜索币种 (如 BTC, ETH)"
                       style={{
                         width: "100%",
@@ -389,12 +399,14 @@ export default function WatchlistEditor({
                           overflow: "auto",
                         }}
                       >
-                        {searchResults.map((instId) => (
+                        {searchResults.map((asset) => (
                           <div
-                            key={instId}
+                            key={asset.assetId}
                             onClick={() => {
-                              setEditorCoins((prev) => [...prev, instId]);
-                              setSearchQuery("");
+                              dispatchEditor({
+                                type: "add_coin",
+                                assetId: asset.assetId,
+                              });
                             }}
                             style={{
                               padding: "7px 10px",
@@ -411,8 +423,12 @@ export default function WatchlistEditor({
                               e.currentTarget.style.background = "#fff";
                             }}
                           >
-                            <span style={{ fontWeight: 600 }}>{instId.replace(/[-_]USDT$/i, "")}</span>
-                            <span style={{ color: "#9ca3af", fontSize: 10 }}>{instId}</span>
+                            <span style={{ fontWeight: 600 }}>
+                              {asset.symbol} · {asset.name}
+                            </span>
+                            <span style={{ color: "#9ca3af", fontSize: 10 }}>
+                              {asset.assetId}
+                            </span>
                           </div>
                         ))}
                       </div>
@@ -420,7 +436,7 @@ export default function WatchlistEditor({
                   </div>
 
                   {/* Selected coins */}
-                  {editorCoins.length > 0 && (
+                  {editor.coins.length > 0 && (
                     <div
                       style={{
                         display: "flex",
@@ -429,9 +445,9 @@ export default function WatchlistEditor({
                         marginTop: 10,
                       }}
                     >
-                      {editorCoins.map((instId) => (
+                      {editor.coins.map((assetId) => (
                         <span
-                          key={instId}
+                          key={assetId}
                           style={{
                             display: "inline-flex",
                             alignItems: "center",
@@ -443,10 +459,13 @@ export default function WatchlistEditor({
                             fontWeight: 500,
                           }}
                         >
-                          {instId.replace(/[-_]USDT$/i, "")}
+                          {assetsById.get(assetId)?.symbol ?? assetId}
                           <button
                             onClick={() =>
-                              setEditorCoins((prev) => prev.filter((c) => c !== instId))
+                              dispatchEditor({
+                                type: "remove_coin",
+                                assetId,
+                              })
                             }
                             style={{
                               background: "none",
@@ -490,32 +509,32 @@ export default function WatchlistEditor({
                     </button>
                     <button
                       onClick={handleSave}
-                      disabled={!editorName.trim() || editorCoins.length === 0}
+                      disabled={!editor.name.trim() || editor.coins.length === 0}
                       style={{
                         padding: "6px 14px",
                         borderRadius: 6,
                         border: "none",
                         background:
-                          !editorName.trim() || editorCoins.length === 0
+                          !editor.name.trim() || editor.coins.length === 0
                             ? "#d1d5db"
                             : "#1f2328",
                         color: "#fff",
                         fontSize: 12,
                         cursor:
-                          !editorName.trim() || editorCoins.length === 0
+                          !editor.name.trim() || editor.coins.length === 0
                             ? "default"
                             : "pointer",
                         fontWeight: 600,
                       }}
                     >
-                      {editingId ? "保存修改" : "创建板块"}
+                      {editor.mode.kind === "editing" ? "保存修改" : "创建板块"}
                     </button>
                   </div>
                 </div>
               )}
 
               {/* Add button */}
-              {editingId === undefined && (
+              {editor.mode.kind === "closed" && (
                 <div style={{ padding: "8px 16px" }}>
                   <button
                     onClick={startAdd}
@@ -542,7 +561,12 @@ export default function WatchlistEditor({
         {/* Footer */}
         <div style={{ padding: "12px 20px", borderTop: "1px solid #e5e7eb" }}>
           <button
-            onClick={onReset}
+            onClick={() => {
+              if (window.confirm("恢复默认会删除全部自定义板块，确定继续吗？")) {
+                onReset();
+                dispatchEditor({ type: "close" });
+              }
+            }}
             style={{
               width: "100%",
               padding: "8px 0",

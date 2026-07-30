@@ -6,13 +6,11 @@ import SectorTreemap from "@/components/SectorTreemap";
 import TrendBarChart from "@/components/TrendBarChart";
 import WatchlistEditor from "@/components/WatchlistEditor";
 import CoinDetailModal from "@/components/CoinDetailModal";
-import PortfolioSummary from "@/components/PortfolioSummary";
 import CorrelationHeatmap from "@/components/CorrelationHeatmap";
-import SectorManager from "@/components/SectorManager";
-import BacktestPanel from "@/components/BacktestPanel";
-import sectorsFile from "@/data/sectors.json";
+import { useBoardData } from "@/components/board/use-board-data";
 import {
   loadWatchlist,
+  saveWatchlist,
   toggleSector,
   resetWatchlist,
   filterSnapshotByWatchlist,
@@ -20,27 +18,21 @@ import {
   updateCustomSector,
   deleteCustomSector,
 } from "@/lib/watchlist";
-import { PRESETS, applyPreset } from "@/lib/presets";
 import {
-  fetchGateSpotTickers,
-  fetchGateKlines,
-  buildSnapshotFromGate,
-  buildCustomSectorsFromGate,
-  getGateUsdtSpotIds,
-  CG_TO_GATE,
-} from "@/lib/gate";
-import { fetchOkxKlines, CG_TO_OKX } from "@/lib/okx";
-import { fetchCgKlines } from "@/lib/coingecko";
+  PRESETS,
+  PRESET_STORAGE_KEY,
+  applyPreset,
+  findMatchingPresetId,
+} from "@/lib/presets";
+import { buildCustomSectorSnapshots } from "@/lib/market-data/custom-sectors";
 import { detectAllSignals } from "@/lib/signals";
 import { buildCorrelationMatrix } from "@/lib/correlation";
-import type { DailySnapshot, PeriodType, WatchlistConfig, SectorConfig, CustomSectorConfig, CoinSnapshot, SectorSnapshot, SectorsFile } from "@/lib/types";
+import type { PeriodType, WatchlistConfig, SectorConfig, CustomSectorConfig, CoinSnapshot } from "@/lib/types";
+import type { BoardResponse } from "@/lib/market-data/bff-contracts";
 
 interface Props {
-  snapshot: DailySnapshot;
-  holdings: string[];
+  initialBoard: BoardResponse;
 }
-
-const OKX_REFRESH_MS = 30000;
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
@@ -53,29 +45,63 @@ function useIsMobile() {
   return isMobile;
 }
 
-export default function HomeClient({ snapshot, holdings }: Props) {
+export default function HomeClient({ initialBoard }: Props) {
+  const {
+    board,
+    closesByAssetId,
+    status: boardStatus,
+  } = useBoardData(initialBoard);
+  const snapshot = board.data.snapshot;
+  const holdings = board.data.holdings;
   const isMobile = useIsMobile();
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [viewMode, setViewMode] = useState<"detailed" | "overview">("detailed");
   const [period, setPeriod] = useState<PeriodType>("24h");
-  const [okxData, setOkxData] = useState<DailySnapshot | null>(null);
-  const [okxTickers, setOkxTickers] = useState<Map<string, { currency_pair: string; last: string; high_24h: string; low_24h: string; base_volume: string; quote_volume: string; change_percentage: string }> | null>(null);
-  const [okxStatus, setOkxStatus] = useState<"idle" | "loading" | "live" | "error">("idle");
-  const [okxKlines, setOkxKlines] = useState<Map<string, number[]> | null>(null);
   const [mainView, setMainView] = useState<"split" | "chart" | "treemap">("split");
   const [selectedCoin, setSelectedCoin] = useState<{ coin: CoinSnapshot; sectorName: string } | null>(null);
   const [watchlistOpen, setWatchlistOpen] = useState(false);
-  const [sectorManagerOpen, setSectorManagerOpen] = useState(false);
-  const [watchlistConfig, setWatchlistConfig] = useState<WatchlistConfig>(() =>
-    loadWatchlist(snapshot.sectors.map((s) => s.id)),
+  const builtInSectorIdsKey = snapshot.sectors
+    .map((sector) => sector.id)
+    .join(",");
+  const builtInSectorIds = useMemo(
+    () => builtInSectorIdsKey.split(",").filter(Boolean),
+    [builtInSectorIdsKey],
   );
-  const [activePreset, setActivePreset] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("sector-preset") || "all";
+  const [watchlistConfig, setWatchlistConfig] = useState<WatchlistConfig>(() => ({
+    version: 2,
+    sectors: Object.fromEntries(
+      snapshot.sectors.map((sector) => [sector.id, { enabled: true }]),
+    ),
+    customSectors: [],
+  }));
+  const [watchlistLoaded, setWatchlistLoaded] = useState(false);
+  const activePreset =
+    findMatchingPresetId(watchlistConfig, builtInSectorIds) ?? "";
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setWatchlistConfig(loadWatchlist(builtInSectorIds));
+      setWatchlistLoaded(true);
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [builtInSectorIds]);
+
+  useEffect(() => {
+    if (!watchlistLoaded) return;
+
+    saveWatchlist(watchlistConfig);
+    try {
+      if (activePreset) {
+        localStorage.setItem(PRESET_STORAGE_KEY, activePreset);
+      } else {
+        localStorage.removeItem(PRESET_STORAGE_KEY);
+      }
+    } catch {
+      // Storage can be unavailable; in-memory state remains authoritative.
     }
-    return "all";
-  });
+  }, [activePreset, watchlistConfig, watchlistLoaded]);
 
   // Size observer — ResizeObserver on container + window resize fallback
   useEffect(() => {
@@ -107,102 +133,11 @@ export default function HomeClient({ snapshot, holdings }: Props) {
     };
   }, []);
 
-  // Sector config for OKX merging
+  // Canonical sector config used by the historical correlation view.
   const sectorConfig = useMemo<SectorConfig[]>(
     () => snapshot.sectors.map((s) => ({ id: s.id, name: s.name, coins: s.coins.map((c) => c.id) })),
     [snapshot],
   );
-
-  // Fetch Gate.io data
-  const fetchOkx = useCallback(async () => {
-    setOkxStatus((prev) => (prev === "idle" ? "loading" : prev));
-    try {
-      const tickers = await fetchGateSpotTickers();
-      setOkxTickers(tickers);
-
-      // Collect instIds only for coins we track (built-in + custom sectors)
-      const needed = new Set<string>();
-      for (const sc of sectorConfig) {
-        for (const coinId of sc.coins) {
-          const gateId = CG_TO_GATE[coinId];
-          if (gateId) needed.add(gateId);
-        }
-      }
-      for (const cs of watchlistConfig.customSectors ?? []) {
-        for (const instId of cs.coins) needed.add(instId);
-      }
-      const klines = needed.size > 0
-        ? await fetchGateKlines([...needed])
-        : new Map<string, number[]>();
-
-      // Fallback: for coins not on Gate.io (or where klines failed), try OKX
-      const okxNeeded = new Set<string>();
-      for (const sc of sectorConfig) {
-        for (const coinId of sc.coins) {
-          const gateId = CG_TO_GATE[coinId];
-          const okxId = CG_TO_OKX[coinId];
-          if (okxId) {
-            // Need OKX if: Gate mapping is null, or Gate klines failed
-            if (gateId === null || (gateId && !klines.has(gateId))) {
-              okxNeeded.add(okxId);
-            }
-          }
-        }
-      }
-      if (okxNeeded.size > 0) {
-        try {
-          const okxKlines = await fetchOkxKlines([...okxNeeded]);
-          // Merge: convert OKX instId format to Gate format (BTC-USDT → BTC_USDT)
-          for (const [okxInstId, closes] of okxKlines) {
-            const gateInstId = okxInstId.replace(/-/g, "_");
-            if (!klines.has(gateInstId)) {
-              klines.set(gateInstId, closes);
-            }
-          }
-        } catch {
-          // OKX fallback failed — use whatever Gate.io gave us
-        }
-      }
-
-      // Second fallback: CoinGecko for coins not listed on either Gate.io or OKX (e.g. XMR, Aster)
-      const cgNeeded = new Set<string>();
-      for (const sc of sectorConfig) {
-        for (const coinId of sc.coins) {
-          const gateId = CG_TO_GATE[coinId];
-          const okxId = CG_TO_OKX[coinId];
-          // CG is needed only if neither exchange can serve this coin
-          if (gateId === null && okxId === null) {
-            cgNeeded.add(coinId);
-          }
-        }
-      }
-      let cgKlines: Map<string, number[]> | undefined;
-      if (cgNeeded.size > 0) {
-        try {
-          cgKlines = await fetchCgKlines([...cgNeeded]);
-        } catch {
-          // CG fallback failed — proceed without it
-        }
-      }
-      setOkxKlines(klines);
-
-      // Build snapshot with klines data
-      const merged = buildSnapshotFromGate(sectorConfig, tickers, snapshot, klines, cgKlines);
-      if (merged.sectors.length > 0) {
-        setOkxData(merged);
-        setOkxStatus("live");
-      }
-    } catch {
-      setOkxStatus("error");
-    }
-  }, [sectorConfig, snapshot, watchlistConfig]);
-
-  // Fetch OKX on mount + auto-refresh
-  useEffect(() => {
-    fetchOkx();
-    const id = setInterval(fetchOkx, OKX_REFRESH_MS);
-    return () => clearInterval(id);
-  }, [fetchOkx]);
 
   // Watchlist callbacks
   const handleWatchlistToggle = useCallback((sectorId: string) => {
@@ -210,19 +145,17 @@ export default function HomeClient({ snapshot, holdings }: Props) {
   }, []);
 
   const handleWatchlistReset = useCallback(() => {
-    setWatchlistConfig(resetWatchlist(snapshot.sectors.map((s) => s.id)));
-  }, [snapshot.sectors]);
+    setWatchlistConfig(resetWatchlist(builtInSectorIds));
+  }, [builtInSectorIds]);
 
   // Preset switch
   const handlePresetChange = useCallback((presetId: string) => {
     const preset = PRESETS.find((p) => p.id === presetId);
     if (!preset) return;
-    setActivePreset(presetId);
-    localStorage.setItem("sector-preset", presetId);
     setWatchlistConfig((prev) =>
-      applyPreset(prev, preset, snapshot.sectors.map((s) => s.id)),
+      applyPreset(prev, preset, builtInSectorIds),
     );
-  }, [snapshot.sectors]);
+  }, [builtInSectorIds]);
 
   // Custom sector callbacks
   const handleAddCustomSector = useCallback((name: string, coins: string[]) => {
@@ -237,43 +170,32 @@ export default function HomeClient({ snapshot, holdings }: Props) {
     setWatchlistConfig((prev) => deleteCustomSector(prev, id));
   }, []);
 
-  // Active snapshot: Gate.io real-time + custom sectors merged
+  // Active snapshot: BFF data filtered by the local watchlist.
   const activeSnapshot = useMemo(() => {
-    const raw = okxData ?? snapshot;
-    const filtered = filterSnapshotByWatchlist(raw, watchlistConfig);
+    const filtered = filterSnapshotByWatchlist(snapshot, watchlistConfig);
 
-    // Build custom sectors from Gate.io data
     const customSectorsConfig = watchlistConfig.customSectors ?? [];
-    let customSectorSnapshots: DailySnapshot["sectors"] = [];
-    if (customSectorsConfig.length > 0 && okxTickers) {
-      const built = buildCustomSectorsFromGate(customSectorsConfig, okxTickers, snapshot, okxKlines ?? undefined);
-      customSectorSnapshots = built.filter(
+    const customSectorSnapshots = buildCustomSectorSnapshots(
+      customSectorsConfig,
+      snapshot,
+    ).filter(
         (s) => watchlistConfig.sectors[s.id]?.enabled !== false,
       );
-    }
 
     return {
       ...filtered,
       sectors: [...filtered.sectors, ...customSectorSnapshots],
-      generatedAt: (okxData ?? filtered).generatedAt,
-      source: (okxData ?? filtered).source,
     };
-  }, [okxData, okxTickers, snapshot, watchlistConfig, okxKlines]);
+  }, [snapshot, watchlistConfig]);
 
   // Sector rotation signals
   const signals = useMemo(() => detectAllSignals(activeSnapshot.sectors), [activeSnapshot.sectors]);
 
-  // Correlation matrix (computed from OKX klines)
+  // Correlation matrix uses one compact, batched database history response.
   const correlationMatrix = useMemo(() => {
-    if (!okxKlines || okxKlines.size === 0) return null;
-    return buildCorrelationMatrix(sectorConfig, okxKlines);
-  }, [okxKlines, sectorConfig]);
-
-  // Total volume across all sectors for volume dot scaling
-  const totalVolume = useMemo(
-    () => activeSnapshot.sectors.reduce((sum, s) => sum + (s.totalVolume24h ?? 0), 0),
-    [activeSnapshot.sectors],
-  );
+    if (closesByAssetId.size === 0) return null;
+    return buildCorrelationMatrix(sectorConfig, closesByAssetId);
+  }, [closesByAssetId, sectorConfig]);
 
   // Coin → sector lookup for detail modal
   const coinSector = useMemo(() => {
@@ -284,12 +206,6 @@ export default function HomeClient({ snapshot, holdings }: Props) {
     }
     return undefined;
   }, [activeSnapshot.sectors, selectedCoin]);
-
-  // Derived data for UI
-  const gateUsdtIds = useMemo(() => {
-    if (!okxTickers) return [] as string[];
-    return getGateUsdtSpotIds(okxTickers);
-  }, [okxTickers]);
 
   const customSectors: CustomSectorConfig[] = watchlistConfig.customSectors ?? [];
 
@@ -327,15 +243,18 @@ export default function HomeClient({ snapshot, holdings }: Props) {
       <Header
         date={activeSnapshot.date}
         generatedAt={activeSnapshot.generatedAt}
+        dataQuality={activeSnapshot.dataQuality}
         totalSectors={activeSnapshot.sectors.length}
         totalCoins={totalCoins}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
         period={period}
         onPeriodChange={setPeriod}
-        okxStatus={okxStatus}
+        refreshStatus={boardStatus}
+        dataBackend={board.meta.backend}
+        dataSources={board.meta.sources}
+        dualRead={board.meta.dualRead}
         onOpenWatchlist={() => setWatchlistOpen(true)}
-        onOpenSectorManager={() => setSectorManagerOpen(true)}
         isMobile={isMobile}
         activePreset={activePreset}
         onPresetChange={handlePresetChange}
@@ -370,7 +289,7 @@ export default function HomeClient({ snapshot, holdings }: Props) {
             overflow: mainView === "treemap" ? "hidden" : "auto",
           }}
         >
-          <TrendBarChart sectors={activeSnapshot.sectors} signals={signals} totalVolume={totalVolume} isMobile={isMobile} />
+          <TrendBarChart sectors={activeSnapshot.sectors} signals={signals} isMobile={isMobile} />
         </div>
 
         {/* View toggle — bottom-left corner */}
@@ -404,20 +323,7 @@ export default function HomeClient({ snapshot, holdings }: Props) {
         </button>
       </div>
 
-      <PortfolioSummary holdings={holdings} sectors={activeSnapshot.sectors} />
       <CorrelationHeatmap matrix={correlationMatrix} isMobile={isMobile} />
-      <BacktestPanel />
-
-      <SectorManager
-        open={sectorManagerOpen}
-        onClose={() => setSectorManagerOpen(false)}
-        sectorsData={sectorsFile as SectorsFile}
-        gateInstIds={gateUsdtIds}
-        onSaved={() => {
-          // Reload to pick up new sectors.json after Vercel rebuilds
-          setTimeout(() => window.location.reload(), 35000);
-        }}
-      />
 
       <WatchlistEditor
         open={watchlistOpen}
@@ -428,7 +334,7 @@ export default function HomeClient({ snapshot, holdings }: Props) {
         onToggle={handleWatchlistToggle}
         onReset={handleWatchlistReset}
         onClose={() => setWatchlistOpen(false)}
-        okxInstIds={gateUsdtIds}
+        assets={board.data.assets}
         customSectors={customSectors}
         onAddCustomSector={handleAddCustomSector}
         onUpdateCustomSector={handleUpdateCustomSector}
@@ -440,10 +346,7 @@ export default function HomeClient({ snapshot, holdings }: Props) {
           coin={selectedCoin.coin}
           sectorName={selectedCoin.sectorName}
           sector={coinSector}
-          closes={(() => {
-            const gateId = CG_TO_GATE[selectedCoin.coin.id];
-            return gateId ? okxKlines?.get(gateId) : undefined;
-          })()}
+          closes={closesByAssetId.get(selectedCoin.coin.id)}
           onClose={() => setSelectedCoin(null)}
         />
       )}

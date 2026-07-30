@@ -2,7 +2,32 @@
 
 > **用途**：让任何人（或下次的 AI 会话）打开 30 秒内能续上项目。
 > **更新频率**：每个阶段切换或重大决策后更新本文件。
-> **更新时间**：2026-05-16（阶段 2-4 完成，MVP 部署上线，每小时抓取已配置）
+> **更新时间**：2026-07-30
+>
+> **注意**：本文主体保留早期 MVP 阶段记录。当前修复路线以 `docs/07-complete-repair-plan.md` 为准：P0～P4 已完成实现和 Preview 验收，并按个人零成本方案发布到 Production；P5～P6 未开始。
+
+---
+
+## 当前修复进度（2026-07-30）
+
+- P0：安全边界、依赖审计和质量门已完成并通过 `npm run check`。
+- P1：数据契约、provider fixtures、指标/快照校验、缓存和 watchlist 状态机已完成并通过测试。
+- P2：Neon Marketplace 免费计划资源 `crypto-sector-board-preview-db` 已连接到 Preview（`sin1`），`npm run db:setup` 已成功写入 56 assets、20 aliases、168 provider mappings、14 sectors、56 memberships。
+- P3（审计修复完成）：已实现 Gate/OKX `1h` K 线、三家 latest quote、CoinGecko market cap、数据库游标补洞、小时桶幂等锁、限流重试、单币失败隔离、事务化旧快照导入和 `/api/v1/data-health`；补齐 quote 防倒退、30 分钟遗留运行回收、Provider 无效记录错误、HTTP 响应释放以及健康状态防误报。
+- P3 自动化：旧 `hourly-snapshot.yml` 已替换为只写数据库的 `ingest.yml`；不再提交快照、不再由采集任务触发 Vercel 部署。`partial` 采集和 `degraded` 健康状态现在会让 Action 失败。全量 13 个测试文件、82 个测试通过，生产依赖 0 漏洞，生产构建通过。
+- P3 Preview 数据：24 份旧快照导入 1260 个合法资产窗口、拒绝 84 个不完整 OHLC；重复导入 24/24 均 `skipped_duplicate`。`0002_p3_quote_volume_semantics.sql` 已修正 OKX 历史成交量错列，剩余错误行 0；审计后真实采集 5/5 成功，latest quote 162/162 且 fresh 162/162，24h 闭合 `1h` K 线 2544/2544。
+- P3 Preview 部署：Vercel deployment `dpl_B6Zkk1pnXX9vphjt35fPVKkiQo6d`，状态 Ready，URL 为 `https://crypto-sector-board-mnxjgjvox-sitabanubanu-8645s-projects.vercel.app`。
+- P3 线上验收：新版 `/api/v1/data-health` 为 `healthy`、24h 缺口 0、quote 缺失/过期 0、卡死运行 0、过期 provider 0；主页/sectors/snapshots 为 200，非法快照为 400，匿名 POST 为 405，部署错误日志为空。
+- P4 BFF：新增 `/api/v1/board`、`/api/v1/candles`、`/api/v1/history`，DB 聚合、严格契约、30 秒/5 分钟缓存、DB/JSON 双读和 `DATA_BACKEND=json` 回滚均已完成。
+- P4 页面：首屏改为 server-only DAL，客户端用 SWR；56 个资产的 31 天历史合并为一个请求，浏览器不再调用 Gate/OKX/CoinGecko 通用代理。watchlist 已升级为 canonical asset ID schema v3。
+- P4 历史：Preview 已执行一次性 744 小时补齐；Gate 40,176/40,176，OKX 38,659/38,688。日级聚合下推 PostgreSQL后，56 资产/31 天首次查询约 4.27 秒，覆盖约 96.43%；MKR、XMR 无交易所现货历史并明确标为缺失。
+- P4 验收：14 个测试文件、89 个测试、生产依赖 0 漏洞和 production build 通过；桌面及 390×844 移动浏览器控制台 0 error/0 warning，30d、币种详情和自定义板块正常。
+- P4 Preview 部署：deployment `dpl_2dsVYRMtmtfSkMgf7oEBeHV83TBB` 为 Ready，URL 为 `https://crypto-sector-board-4ryd8fh3y-sitabanubanu-8645s-projects.vercel.app`。board/history/candles/data-health/主页均通过受保护云端复验。
+- P4 最终数据状态：board DB coverage 100%、dual-read common 56/56；history 1,674 点、覆盖约 96.43%；手动补齐最新小时后 data-health 为 `healthy`，24h/7d/quotes 均 100%。
+- Production 发布采用个人零成本临时方案：Vercel 保持 Hobby，Production 与 Preview 共用现有 Neon Free 数据库，不创建新的付费资源。该方案没有环境数据隔离，只适合当前个人、低流量、非商业使用；有外部用户或商业用途前必须拆分数据库。
+- GitHub repository secret `INGEST_DATABASE_URL` 已指向这套共享免费数据库；`ingest.yml` 在 `main` 中每小时只写数据库，不再提交快照或触发数据型部署。
+- 当前页面默认从数据库读取；旧 JSON 只作为只读回滚和双读比较基线，不再自动生成。
+- 未完成：Production 独立数据库、P5～P6、正式域名。当前共享数据库例外及恢复步骤见 `docs/06-runbook.md`。
 
 ---
 
@@ -178,6 +203,14 @@ crypto-sector-board/
 ---
 
 ## 7. 下一步计划（按优先级）
+
+当前修复路线：
+
+1. 观察 Production 与每小时数据库采集；确认 Vercel/Neon 免费额度和数据健康保持稳定。
+2. 进入 P5：先修持仓语义，再统一信号/相关性，最后实现无前视回测与结果存储。
+3. 在出现外部用户或商业用途前拆分 Production 数据库；P5 验收通过后进入 P6 移动体验、无障碍和管理端。
+
+以下为早期 MVP 路线记录，不再作为当前执行入口：
 
 1. ~~阶段 2 收尾~~ ✅ 排版优化已完成，推送到 GitHub
 

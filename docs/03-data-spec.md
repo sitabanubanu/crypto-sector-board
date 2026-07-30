@@ -16,23 +16,38 @@
 - "主流币种" 阈值：流通市值 ≥ 3 亿美元（USD），定义在 `data/sectors.json` 的 `mainStreamThreshold`
 - 单币若低于阈值：仍抓取并显示，但 `isMainstream=false`，**不参与板块加权计算**
 
-## 3. `data/sectors.json` 结构
+## 3. 规范资产注册表（P2）
+
+系统内部只认项目控制的稳定 `assetId`。CoinGecko slug、Gate pair 和 OKX instId 统一登记在 `data/assets.json`，不能再在业务代码中各维护一份映射。
+
+每个资产具有 CoinGecko、Gate、OKX 三条显式 provider 状态。active 状态必须有 instrument ID；unavailable 状态必须解释原因。运行时契约和别名解析位于 `lib/market-data/registry.ts`。
+
+关键迁移规则：
+
+- TON/GRAM：保留历史资产 ID，通过 provider mapping 解释当前 GRAM instrument。
+- MKR/SKY：两者单位不同，禁止用 SKY 行情伪装 MKR。
+- ASTER/PI：只能使用注册表明确指定的 provider ID，不能根据 ticker 猜测。
+- MNT/HNT/XMR：没有对应交易所 instrument 时明确标记 unavailable。
+
+## 4. `data/sectors.json` v2 结构
 
 ```json
 {
-  "version": 1,
-  "lastUpdated": "2026-05-15",
+  "version": 2,
+  "registryVersion": 1,
+  "lastUpdated": "2026-07-30",
+  "effectiveFrom": "2026-05-15",
   "mainStreamThreshold": 300000000,
   "sectors": [
     {
       "id": "btc",
       "name": "BTC",
-      "coins": ["bitcoin"]
+      "assetIds": ["bitcoin"]
     },
     {
       "id": "l1",
       "name": "Layer 1 主流",
-      "coins": ["ethereum", "solana", "binancecoin", ...]
+      "assetIds": ["ethereum", "solana", "binancecoin", ...]
     }
   ]
 }
@@ -41,20 +56,13 @@
 字段说明：
 - `id`：板块英文短 ID
 - `name`：UI 显示名（中英皆可）
-- `coins`：CoinGecko **ID** 列表（全小写英文 slug，**不是 ticker**）
+- `assetIds`：项目规范资产 ID，不是 ticker，也不再等同于任一 provider 的 ID
+- `registryVersion`：所依赖的资产注册表版本
+- `effectiveFrom`：当前成员关系最早已知生效时间，用于 point-in-time 查询
 
-> CoinGecko ID 查询方式：访问 `https://www.coingecko.com/en/coins/{slug}`，URL 里的 slug 就是 ID。或调用 `/search?query=xxx` 接口。
+任何新增资产必须先进入 `data/assets.json` 并通过 `npm run registry:check`，再加入板块。
 
-### 已知 ID 映射陷阱
-| Ticker | 错误猜测 | 正确 ID |
-|---|---|---|
-| ORDI | `ordi` | `ordinals` |
-| ASTER | `aster-defi` | `aster-2` |
-| FET / ASI | `artificial-superintelligence-alliance` | `fetch-ai` |
-| VIRTUAL | `virtuals-protocol` | `virtual-protocol` |
-| STX | `stacks` | `blockstack` |
-
-## 4. `data/snapshots/YYYY-MM-DD.json` 结构
+## 5. `data/snapshots/YYYY-MM-DD.json` 结构
 
 ```json
 {
@@ -90,7 +98,7 @@
 }
 ```
 
-## 5. 指标公式
+## 6. 指标公式
 
 ### 单币指标（基于滚动 24h 数据）
 ```
@@ -112,13 +120,13 @@ sector_metric = Σ (coin_metric_i × market_cap_i) / Σ market_cap_i
 
 只对 `isMainstream=true` 的币参与板块加权计算。
 
-## 6. 数据源约束
+## 7. 数据源约束
 - **CoinGecko 免费层限频**：~10-30 次/分钟
 - **本项目实现**：批量接口 + 8 秒批次间隔，56 个币 → 2 个请求 → ~10 秒完成
 - **失败重试**：每次请求最多重试 3 次，429 退避 4s/8s/16s
 - **抓取 endpoint**：`/coins/markets?vs_currency=usd&ids={comma_list}&price_change_percentage=24h`
 
-## 7. 数据正确性核对
+## 8. 数据正确性核对
 每次脚本调整后核对：
 1. BTC `high`/`low`/`returnPct` 与 CoinGecko 网页 24h 数据误差 <0.5%
 2. 板块 `totalMarketCap` = 板块内各币 marketCap 之和

@@ -1,28 +1,47 @@
+import { getActiveProviderInstrumentIds } from "@/lib/market-data/registry";
+import {
+  getCoinGeckoProxyPolicy,
+  getProxyPath,
+} from "@/lib/server/market-proxy-policy";
+import {
+  forbiddenProxyResponse,
+  invalidProxyRequestResponse,
+  isAllowedBrowserRequest,
+  proxyJson,
+} from "@/lib/server/upstream-json";
+
 export const runtime = "edge";
 
-export async function GET(
-  req: Request,
-  { params }: { params: Promise<{ path: string[] }> },
-) {
-  const { path } = await params;
-  const query = new URL(req.url).search;
-  const cgUrl = `https://api.coingecko.com/api/v3/${path.join("/")}${query}`;
+const allowedCoinIds = new Set(
+  getActiveProviderInstrumentIds("coingecko"),
+);
 
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (process.env.COINGECKO_API_KEY) {
-    headers["x-cg-pro-api-key"] = process.env.COINGECKO_API_KEY;
+export async function GET(req: Request) {
+  if (!isAllowedBrowserRequest(req)) {
+    return forbiddenProxyResponse();
   }
 
-  const res = await fetch(cgUrl, { headers });
+  const path = getProxyPath(req.url, "/api/cg");
+  if (!path) {
+    return invalidProxyRequestResponse();
+  }
+  const apiKey = process.env.COINGECKO_API_KEY?.trim();
+  const apiBaseUrl = apiKey
+    ? "https://pro-api.coingecko.com/api/v3"
+    : "https://api.coingecko.com/api/v3";
+  const policy = getCoinGeckoProxyPolicy(
+    path,
+    req.url,
+    allowedCoinIds,
+    apiBaseUrl,
+  );
+  if (!policy) {
+    return invalidProxyRequestResponse();
+  }
 
-  const body = await res.text();
-
-  return new Response(body, {
-    status: res.status,
-    headers: {
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
-      "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
-    },
+  return proxyJson(policy.url, {
+    cacheControl: policy.cacheControl,
+    headers: apiKey ? { "x-cg-pro-api-key": apiKey } : undefined,
+    maxBytes: policy.maxBytes,
   });
 }

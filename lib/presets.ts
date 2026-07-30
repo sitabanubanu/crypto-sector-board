@@ -7,6 +7,8 @@ export interface Preset {
   sectorIds: string[];
 }
 
+export const PRESET_STORAGE_KEY = "sector-preset";
+
 export const PRESETS: Preset[] = [
   {
     id: "all",
@@ -45,18 +47,39 @@ export function applyPreset(
   preset: Preset,
   allSectorIds: string[],
 ): WatchlistConfig {
-  if (preset.id === "all") {
-    // Enable all built-in sectors
-    const sectors: Record<string, { enabled: boolean }> = {};
-    for (const id of allSectorIds) {
-      sectors[id] = { enabled: true };
-    }
-    return { ...config, sectors };
-  }
-
-  const sectors: Record<string, { enabled: boolean }> = {};
+  const sectors: Record<string, { enabled: boolean }> = {
+    ...config.sectors,
+  };
   for (const id of allSectorIds) {
-    sectors[id] = { enabled: preset.sectorIds.includes(id) };
+    sectors[id] = {
+      enabled: preset.id === "all" || preset.sectorIds.includes(id),
+    };
   }
-  return { ...config, sectors };
+  return {
+    ...config,
+    sectors,
+    customSectors: [...config.customSectors],
+  };
+}
+
+export function configMatchesPreset(
+  config: WatchlistConfig,
+  preset: Preset,
+  allSectorIds: string[],
+): boolean {
+  return allSectorIds.every((id) => {
+    const expected = preset.id === "all" || preset.sectorIds.includes(id);
+    return config.sectors[id]?.enabled === expected;
+  });
+}
+
+export function findMatchingPresetId(
+  config: WatchlistConfig,
+  allSectorIds: string[],
+): string | null {
+  return (
+    PRESETS.find((preset) =>
+      configMatchesPreset(config, preset, allSectorIds),
+    )?.id ?? null
+  );
 }

@@ -44,7 +44,7 @@ export function runBacktest(
     // Pick top N sectors by 24h return
     const ranked = [...today.sectors]
       .filter((s) => s.coins.length > 1 && s.weightedReturnPct != null)
-      .sort((a, b) => b.weightedReturnPct - a.weightedReturnPct);
+      .sort((a, b) => b.weightedReturnPct! - a.weightedReturnPct!);
 
     const picks = ranked.slice(0, topN);
     if (picks.length === 0) continue;

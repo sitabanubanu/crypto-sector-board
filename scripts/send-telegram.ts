@@ -2,9 +2,7 @@
 // Requires env: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 // Usage: npx tsx scripts/send-telegram.ts
 
-import * as fs from "fs";
-import * as path from "path";
-import type { DailySnapshot } from "../lib/types";
+import { loadLatestSnapshot } from "../lib/snapshot";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
@@ -14,21 +12,14 @@ if (!BOT_TOKEN || !CHAT_ID) {
   process.exit(0);
 }
 
-function loadLatestSnapshot(): DailySnapshot | null {
-  const dir = path.join(process.cwd(), "data", "snapshots");
-  if (!fs.existsSync(dir)) return null;
-  const files = fs.readdirSync(dir).filter((f) => f.endsWith(".json")).sort().reverse();
-  if (files.length === 0) return null;
-  const content = fs.readFileSync(path.join(dir, files[0]), "utf-8");
-  return JSON.parse(content) as DailySnapshot;
-}
-
-function formatPct(n: number): string {
+function formatPct(n: number | null | undefined): string {
+  if (n == null || !Number.isFinite(n)) return "N/A";
   const sign = n >= 0 ? "+" : "";
   return `${sign}${(n * 100).toFixed(2)}%`;
 }
 
-function formatMarketCap(v: number): string {
+function formatMarketCap(v: number | null | undefined): string {
+  if (v == null || !Number.isFinite(v)) return "N/A";
   if (v >= 1e12) return `$${(v / 1e12).toFixed(2)}T`;
   if (v >= 1e9) return `$${(v / 1e9).toFixed(2)}B`;
   if (v >= 1e6) return `$${(v / 1e6).toFixed(2)}M`;
@@ -43,13 +34,13 @@ if (!snapshot) {
 
 // Sort sectors by 24h return
 const sorted = [...snapshot.sectors].sort(
-  (a, b) => b.weightedReturnPct - a.weightedReturnPct
+  (a, b) =>
+    (b.weightedReturnPct ?? Number.NEGATIVE_INFINITY) -
+    (a.weightedReturnPct ?? Number.NEGATIVE_INFINITY),
 );
 
 const top5 = sorted.slice(0, 5);
 const bottom3 = sorted.slice(-3).reverse();
-
-const EM = { strong_up: "🔥", strong_down: "❄️", pullback: "💰", bull_trap: "⚠️" };
 
 // Detect signals
 function detectSignal(s: typeof sorted[0]): string | null {
@@ -57,6 +48,7 @@ function detectSignal(s: typeof sorted[0]): string | null {
   const r3 = s.weightedReturnPct3d;
   const r7 = s.weightedReturnPct7d;
   const r30 = s.weightedReturnPct30d;
+  if (r24 == null) return null;
   const allUp = r24 > 0 && (r3 == null || r3 > 0) && (r7 == null || r7 > 0) && (r30 == null || r30 > 0);
   const allDown = r24 < 0 && (r3 == null || r3 < 0) && (r7 == null || r7 < 0) && (r30 == null || r30 < 0);
   if (allUp) return "🔥 强势";

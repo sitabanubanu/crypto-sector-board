@@ -24,6 +24,9 @@
 | 颜色、字号、间距规范 | `docs/04-design-system.md` |
 | 当前阶段与下一步 | `docs/05-roadmap.md` |
 | 本地命令、排错、紧急停服 | `docs/06-runbook.md` |
+| P0～P6 修理路线与真实进度 | `docs/07-complete-repair-plan.md` |
+| 依赖安全例外 | `docs/08-security-audit-exceptions.md` |
+| P2 数据库、资产注册表与 Vercel/Neon 接入 | `docs/09-p2-database-and-asset-registry.md` |
 | 全局规划 / 板块清单 | `PLAN.md` |
 | 每日进度 | `dev-logs/YYYY-MM-DD.md` |
 

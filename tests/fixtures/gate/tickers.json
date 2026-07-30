@@ -1,0 +1,29 @@
+[
+  {
+    "currency_pair": "BTC_USDT",
+    "last": "64000",
+    "lowest_ask": "64001",
+    "highest_bid": "63999",
+    "change_percentage": "0",
+    "base_volume": "1250.5",
+    "quote_volume": "80032000",
+    "high_24h": "65000",
+    "low_24h": "63000"
+  },
+  {
+    "currency_pair": "GRAM_USDT",
+    "last": "1.42",
+    "lowest_ask": "1.421",
+    "highest_bid": "1.419",
+    "change_percentage": "-2.50",
+    "base_volume": "2000000",
+    "quote_volume": "2840000",
+    "high_24h": "1.50",
+    "low_24h": "1.38"
+  },
+  {
+    "currency_pair": "ADA_GUSD",
+    "last": "0.41",
+    "change_percentage": "1.5"
+  }
+]

@@ -1,25 +1,32 @@
+import {
+  getOkxProxyPolicy,
+  getProxyPath,
+} from "@/lib/server/market-proxy-policy";
+import {
+  forbiddenProxyResponse,
+  invalidProxyRequestResponse,
+  isAllowedBrowserRequest,
+  proxyJson,
+} from "@/lib/server/upstream-json";
+
 export const runtime = "edge";
 
-export async function GET(
-  req: Request,
-  { params }: { params: Promise<{ path: string[] }> },
-) {
-  const { path } = await params;
-  const query = new URL(req.url).search;
-  const okxUrl = `https://www.okx.com/api/v5/${path.join("/")}${query}`;
+export async function GET(req: Request) {
+  if (!isAllowedBrowserRequest(req)) {
+    return forbiddenProxyResponse();
+  }
 
-  const res = await fetch(okxUrl, {
-    headers: { "Content-Type": "application/json" },
-  });
+  const path = getProxyPath(req.url, "/api/okx");
+  if (!path) {
+    return invalidProxyRequestResponse();
+  }
+  const policy = getOkxProxyPolicy(path, req.url);
+  if (!policy) {
+    return invalidProxyRequestResponse();
+  }
 
-  const body = await res.text();
-
-  return new Response(body, {
-    status: res.status,
-    headers: {
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
-      "Cache-Control": "public, s-maxage=5, stale-while-revalidate=15",
-    },
+  return proxyJson(policy.url, {
+    cacheControl: policy.cacheControl,
+    maxBytes: policy.maxBytes,
   });
 }

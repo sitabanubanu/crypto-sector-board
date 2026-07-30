@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { runBacktest } from "@/lib/backtest";
 import type { BacktestResult } from "@/lib/backtest";
 import type { DailySnapshot } from "@/lib/types";

@@ -8,7 +8,6 @@ import type { SectorSignal } from "@/lib/signals";
 interface Props {
   sectors: SectorSnapshot[];
   signals?: Map<string, SectorSignal>;
-  totalVolume?: number;
   isMobile?: boolean;
 }
 
@@ -19,7 +18,7 @@ const PERIODS = [
   { key: "30d" as const, label: "30d" },
 ];
 
-export default function TrendBarChart({ sectors, signals, totalVolume, isMobile }: Props) {
+export default function TrendBarChart({ sectors, signals, isMobile }: Props) {
   const ROW_H = isMobile ? 30 : 34;
   const BAR_H = isMobile ? 14 : 18;
   const LABEL_W = isMobile ? 76 : 110;
@@ -55,7 +54,11 @@ export default function TrendBarChart({ sectors, signals, totalVolume, isMobile 
         hasData: hasSectorReturnForPeriod(s, p.key),
       })),
     }));
-    data.sort((a, b) => b.values[0].value - a.values[0].value);
+    data.sort(
+      (a, b) =>
+        (b.values[0].value ?? Number.NEGATIVE_INFINITY) -
+        (a.values[0].value ?? Number.NEGATIVE_INFINITY),
+    );
     return data;
   }, [sectors]);
 
@@ -72,8 +75,8 @@ export default function TrendBarChart({ sectors, signals, totalVolume, isMobile 
     const vals = rows
       .map((r) => r.values.find((v) => v.key === p.key)!)
       .filter((v) => v.hasData);
-    const pos = Math.max(...vals.map((v) => Math.max(v.value, 0)), 0.005);
-    const neg = Math.max(...vals.map((v) => Math.max(-v.value, 0)), 0.005);
+    const pos = Math.max(...vals.map((v) => Math.max(v.value ?? 0, 0)), 0.005);
+    const neg = Math.max(...vals.map((v) => Math.max(-(v.value ?? 0), 0)), 0.005);
     return { pos, neg };
   });
 
@@ -234,7 +237,7 @@ export default function TrendBarChart({ sectors, signals, totalVolume, isMobile 
                         fontSize={isMobile ? 9 : 10}
                         fill="#d1d5db"
                       >
-                        --
+                        N/A
                       </text>
                     </g>
                   );
@@ -244,13 +247,14 @@ export default function TrendBarChart({ sectors, signals, totalVolume, isMobile 
                   sectors.find((s) => s.id === row.id)!,
                   p.key,
                 );
-                const absVal = Math.abs(v.value);
+                const value = v.value!;
+                const absVal = Math.abs(value);
                 let barX: number;
                 let barW: number;
                 let pctX: number;
                 let pctAnchor: "start" | "end";
 
-                if (v.value >= 0) {
+                if (value >= 0) {
                   barW = Math.max((absVal / maxVals[ci].pos) * posArea, absVal === 0 ? 0 : 2);
                   barX = zeroX + 2;
                   pctX = barW > 44 ? zeroX + 2 + barW - 4 : zeroX + 2 + barW + 3;
@@ -291,7 +295,7 @@ export default function TrendBarChart({ sectors, signals, totalVolume, isMobile 
                       fontWeight={600}
                       fill={barColor}
                     >
-                      {formatPct(v.value)}
+                      {formatPct(value)}
                     </text>
                   </g>
                 );

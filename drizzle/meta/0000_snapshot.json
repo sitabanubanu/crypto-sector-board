@@ -1,0 +1,1277 @@
+{
+  "id": "5b2bc2f3-1557-4983-9f37-4e592dcba05c",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.asset_aliases": {
+      "name": "asset_aliases",
+      "schema": "",
+      "columns": {
+        "alias": {
+          "name": "alias",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "asset_id": {
+          "name": "asset_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "alias_type": {
+          "name": "alias_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "asset_aliases_asset_id_idx": {
+          "name": "asset_aliases_asset_id_idx",
+          "columns": [
+            {
+              "expression": "asset_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "asset_aliases_asset_id_assets_asset_id_fk": {
+          "name": "asset_aliases_asset_id_assets_asset_id_fk",
+          "tableFrom": "asset_aliases",
+          "tableTo": "assets",
+          "columnsFrom": [
+            "asset_id"
+          ],
+          "columnsTo": [
+            "asset_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "asset_aliases_alias_format": {
+          "name": "asset_aliases_alias_format",
+          "value": "\"asset_aliases\".\"alias\" ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'"
+        },
+        "asset_aliases_type_check": {
+          "name": "asset_aliases_type_check",
+          "value": "\"asset_aliases\".\"alias_type\" in ('legacy_asset_id', 'provider_slug', 'former_name')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.assets": {
+      "name": "assets",
+      "schema": "",
+      "columns": {
+        "asset_id": {
+          "name": "asset_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "symbol": {
+          "name": "symbol",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "asset_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "primary_provider": {
+          "name": "primary_provider",
+          "type": "market_data_provider",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mapping_note": {
+          "name": "mapping_note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "assets_asset_id_format": {
+          "name": "assets_asset_id_format",
+          "value": "\"assets\".\"asset_id\" ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'"
+        },
+        "assets_symbol_format": {
+          "name": "assets_symbol_format",
+          "value": "\"assets\".\"symbol\" ~ '^[A-Z0-9.]+$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.ingestion_runs": {
+      "name": "ingestion_runs",
+      "schema": "",
+      "columns": {
+        "run_id": {
+          "name": "run_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "dedupe_key": {
+          "name": "dedupe_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "task": {
+          "name": "task",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider": {
+          "name": "provider",
+          "type": "market_data_provider",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "timeframe": {
+          "name": "timeframe",
+          "type": "market_timeframe",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "ingestion_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'running'"
+        },
+        "cursor_from": {
+          "name": "cursor_from",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cursor_to": {
+          "name": "cursor_to",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "requested_count": {
+          "name": "requested_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "accepted_count": {
+          "name": "accepted_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "rejected_count": {
+          "name": "rejected_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "coverage_ratio": {
+          "name": "coverage_ratio",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "error_summary": {
+          "name": "error_summary",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "finished_at": {
+          "name": "finished_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "ingestion_runs_dedupe_key_uq": {
+          "name": "ingestion_runs_dedupe_key_uq",
+          "columns": [
+            {
+              "expression": "dedupe_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "ingestion_runs_status_started_idx": {
+          "name": "ingestion_runs_status_started_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "started_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "ingestion_runs_counts_nonnegative": {
+          "name": "ingestion_runs_counts_nonnegative",
+          "value": "\"ingestion_runs\".\"requested_count\" >= 0 and \"ingestion_runs\".\"accepted_count\" >= 0 and \"ingestion_runs\".\"rejected_count\" >= 0"
+        },
+        "ingestion_runs_counts_consistent": {
+          "name": "ingestion_runs_counts_consistent",
+          "value": "\"ingestion_runs\".\"accepted_count\" + \"ingestion_runs\".\"rejected_count\" <= \"ingestion_runs\".\"requested_count\""
+        },
+        "ingestion_runs_coverage_range": {
+          "name": "ingestion_runs_coverage_range",
+          "value": "\"ingestion_runs\".\"coverage_ratio\" is null or (\"ingestion_runs\".\"coverage_ratio\" >= 0 and \"ingestion_runs\".\"coverage_ratio\" <= 1)"
+        },
+        "ingestion_runs_cursor_order": {
+          "name": "ingestion_runs_cursor_order",
+          "value": "\"ingestion_runs\".\"cursor_from\" is null or \"ingestion_runs\".\"cursor_to\" is null or \"ingestion_runs\".\"cursor_to\" >= \"ingestion_runs\".\"cursor_from\""
+        },
+        "ingestion_runs_finish_order": {
+          "name": "ingestion_runs_finish_order",
+          "value": "\"ingestion_runs\".\"finished_at\" is null or \"ingestion_runs\".\"finished_at\" >= \"ingestion_runs\".\"started_at\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.market_candles": {
+      "name": "market_candles",
+      "schema": "",
+      "columns": {
+        "asset_id": {
+          "name": "asset_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider": {
+          "name": "provider",
+          "type": "market_data_provider",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "timeframe": {
+          "name": "timeframe",
+          "type": "market_timeframe",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "open_time": {
+          "name": "open_time",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "close_time": {
+          "name": "close_time",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "open": {
+          "name": "open",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "high": {
+          "name": "high",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "low": {
+          "name": "low",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "close": {
+          "name": "close",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "volume_base": {
+          "name": "volume_base",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "volume_quote": {
+          "name": "volume_quote",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_complete": {
+          "name": "is_complete",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "fetched_at": {
+          "name": "fetched_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "quality": {
+          "name": "quality",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        }
+      },
+      "indexes": {
+        "market_candles_time_idx": {
+          "name": "market_candles_time_idx",
+          "columns": [
+            {
+              "expression": "timeframe",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "open_time",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "market_candles_asset_id_assets_asset_id_fk": {
+          "name": "market_candles_asset_id_assets_asset_id_fk",
+          "tableFrom": "market_candles",
+          "tableTo": "assets",
+          "columnsFrom": [
+            "asset_id"
+          ],
+          "columnsTo": [
+            "asset_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {
+        "market_candles_pk": {
+          "name": "market_candles_pk",
+          "columns": [
+            "asset_id",
+            "provider",
+            "timeframe",
+            "open_time"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "market_candles_time_order": {
+          "name": "market_candles_time_order",
+          "value": "\"market_candles\".\"close_time\" > \"market_candles\".\"open_time\""
+        },
+        "market_candles_prices_positive": {
+          "name": "market_candles_prices_positive",
+          "value": "\"market_candles\".\"open\" > 0 and \"market_candles\".\"high\" > 0 and \"market_candles\".\"low\" > 0 and \"market_candles\".\"close\" > 0"
+        },
+        "market_candles_ohlc_bounds": {
+          "name": "market_candles_ohlc_bounds",
+          "value": "\"market_candles\".\"high\" >= greatest(\"market_candles\".\"open\", \"market_candles\".\"close\", \"market_candles\".\"low\") and \"market_candles\".\"low\" <= least(\"market_candles\".\"open\", \"market_candles\".\"close\", \"market_candles\".\"high\")"
+        },
+        "market_candles_volume_nonnegative": {
+          "name": "market_candles_volume_nonnegative",
+          "value": "(\"market_candles\".\"volume_base\" is null or \"market_candles\".\"volume_base\" >= 0) and (\"market_candles\".\"volume_quote\" is null or \"market_candles\".\"volume_quote\" >= 0)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.market_caps": {
+      "name": "market_caps",
+      "schema": "",
+      "columns": {
+        "asset_id": {
+          "name": "asset_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider": {
+          "name": "provider",
+          "type": "market_data_provider",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "observed_at": {
+          "name": "observed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "market_cap_usd": {
+          "name": "market_cap_usd",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "circulating_supply": {
+          "name": "circulating_supply",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "total_supply": {
+          "name": "total_supply",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fetched_at": {
+          "name": "fetched_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "quality": {
+          "name": "quality",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        }
+      },
+      "indexes": {
+        "market_caps_observed_at_idx": {
+          "name": "market_caps_observed_at_idx",
+          "columns": [
+            {
+              "expression": "observed_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "market_caps_asset_id_assets_asset_id_fk": {
+          "name": "market_caps_asset_id_assets_asset_id_fk",
+          "tableFrom": "market_caps",
+          "tableTo": "assets",
+          "columnsFrom": [
+            "asset_id"
+          ],
+          "columnsTo": [
+            "asset_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {
+        "market_caps_pk": {
+          "name": "market_caps_pk",
+          "columns": [
+            "asset_id",
+            "provider",
+            "observed_at"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "market_caps_values_nonnegative": {
+          "name": "market_caps_values_nonnegative",
+          "value": "\"market_caps\".\"market_cap_usd\" >= 0 and (\"market_caps\".\"circulating_supply\" is null or \"market_caps\".\"circulating_supply\" >= 0) and (\"market_caps\".\"total_supply\" is null or \"market_caps\".\"total_supply\" >= 0)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.market_quotes_latest": {
+      "name": "market_quotes_latest",
+      "schema": "",
+      "columns": {
+        "asset_id": {
+          "name": "asset_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider": {
+          "name": "provider",
+          "type": "market_data_provider",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "instrument_id": {
+          "name": "instrument_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last": {
+          "name": "last",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "open_24h": {
+          "name": "open_24h",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "high_24h": {
+          "name": "high_24h",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "low_24h": {
+          "name": "low_24h",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "volume_base_24h": {
+          "name": "volume_base_24h",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "volume_quote_24h": {
+          "name": "volume_quote_24h",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "observed_at": {
+          "name": "observed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fetched_at": {
+          "name": "fetched_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "fallback_used": {
+          "name": "fallback_used",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "quality": {
+          "name": "quality",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        }
+      },
+      "indexes": {
+        "market_quotes_latest_observed_at_idx": {
+          "name": "market_quotes_latest_observed_at_idx",
+          "columns": [
+            {
+              "expression": "observed_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "market_quotes_latest_asset_id_assets_asset_id_fk": {
+          "name": "market_quotes_latest_asset_id_assets_asset_id_fk",
+          "tableFrom": "market_quotes_latest",
+          "tableTo": "assets",
+          "columnsFrom": [
+            "asset_id"
+          ],
+          "columnsTo": [
+            "asset_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {
+        "market_quotes_latest_pk": {
+          "name": "market_quotes_latest_pk",
+          "columns": [
+            "asset_id",
+            "provider"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "market_quotes_latest_last_positive": {
+          "name": "market_quotes_latest_last_positive",
+          "value": "\"market_quotes_latest\".\"last\" > 0"
+        },
+        "market_quotes_latest_high_low": {
+          "name": "market_quotes_latest_high_low",
+          "value": "\"market_quotes_latest\".\"high_24h\" is null or \"market_quotes_latest\".\"low_24h\" is null or \"market_quotes_latest\".\"high_24h\" >= \"market_quotes_latest\".\"low_24h\""
+        },
+        "market_quotes_latest_volume_nonnegative": {
+          "name": "market_quotes_latest_volume_nonnegative",
+          "value": "(\"market_quotes_latest\".\"volume_base_24h\" is null or \"market_quotes_latest\".\"volume_base_24h\" >= 0) and (\"market_quotes_latest\".\"volume_quote_24h\" is null or \"market_quotes_latest\".\"volume_quote_24h\" >= 0)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.provider_instruments": {
+      "name": "provider_instruments",
+      "schema": "",
+      "columns": {
+        "mapping_id": {
+          "name": "mapping_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "asset_id": {
+          "name": "asset_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider": {
+          "name": "provider",
+          "type": "market_data_provider",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'spot'"
+        },
+        "instrument_id": {
+          "name": "instrument_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "base_symbol": {
+          "name": "base_symbol",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quote_symbol": {
+          "name": "quote_symbol",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "instrument_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "priority": {
+          "name": "priority",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 100
+        },
+        "supports_quotes": {
+          "name": "supports_quotes",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "supports_candles": {
+          "name": "supports_candles",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "supports_market_cap": {
+          "name": "supports_market_cap",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "first_seen_at": {
+          "name": "first_seen_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_verified_at": {
+          "name": "last_verified_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "delisted_at": {
+          "name": "delisted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mapping_note": {
+          "name": "mapping_note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "provider_instruments_asset_provider_role_uq": {
+          "name": "provider_instruments_asset_provider_role_uq",
+          "columns": [
+            {
+              "expression": "asset_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "provider",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "role",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "provider_instruments_provider_instrument_uq": {
+          "name": "provider_instruments_provider_instrument_uq",
+          "columns": [
+            {
+              "expression": "provider",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "instrument_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"provider_instruments\".\"instrument_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "provider_instruments_status_idx": {
+          "name": "provider_instruments_status_idx",
+          "columns": [
+            {
+              "expression": "provider",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "provider_instruments_asset_id_assets_asset_id_fk": {
+          "name": "provider_instruments_asset_id_assets_asset_id_fk",
+          "tableFrom": "provider_instruments",
+          "tableTo": "assets",
+          "columnsFrom": [
+            "asset_id"
+          ],
+          "columnsTo": [
+            "asset_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "provider_instruments_mapping_id_format": {
+          "name": "provider_instruments_mapping_id_format",
+          "value": "\"provider_instruments\".\"mapping_id\" ~ '^[a-z0-9-]+:[a-z_]+:[a-z0-9-]+$'"
+        },
+        "provider_instruments_role_format": {
+          "name": "provider_instruments_role_format",
+          "value": "\"provider_instruments\".\"role\" ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'"
+        },
+        "provider_instruments_symbol_format": {
+          "name": "provider_instruments_symbol_format",
+          "value": "\"provider_instruments\".\"base_symbol\" ~ '^[A-Z0-9.]+$' and (\"provider_instruments\".\"quote_symbol\" is null or \"provider_instruments\".\"quote_symbol\" ~ '^[A-Z0-9.]+$')"
+        },
+        "provider_instruments_priority_positive": {
+          "name": "provider_instruments_priority_positive",
+          "value": "\"provider_instruments\".\"priority\" > 0"
+        },
+        "provider_instruments_active_has_id": {
+          "name": "provider_instruments_active_has_id",
+          "value": "\"provider_instruments\".\"status\" <> 'active' or \"provider_instruments\".\"instrument_id\" is not null"
+        },
+        "provider_instruments_unavailable_has_no_id": {
+          "name": "provider_instruments_unavailable_has_no_id",
+          "value": "\"provider_instruments\".\"status\" <> 'unavailable' or \"provider_instruments\".\"instrument_id\" is null"
+        },
+        "provider_instruments_delisted_timestamp": {
+          "name": "provider_instruments_delisted_timestamp",
+          "value": "\"provider_instruments\".\"status\" <> 'delisted' or \"provider_instruments\".\"delisted_at\" is not null"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.sector_memberships": {
+      "name": "sector_memberships",
+      "schema": "",
+      "columns": {
+        "sector_id": {
+          "name": "sector_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "asset_id": {
+          "name": "asset_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "effective_from": {
+          "name": "effective_from",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "effective_to": {
+          "name": "effective_to",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "sector_memberships_asset_idx": {
+          "name": "sector_memberships_asset_idx",
+          "columns": [
+            {
+              "expression": "asset_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "sector_memberships_current_idx": {
+          "name": "sector_memberships_current_idx",
+          "columns": [
+            {
+              "expression": "sector_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "sort_order",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"sector_memberships\".\"effective_to\" is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "sector_memberships_sector_id_sectors_sector_id_fk": {
+          "name": "sector_memberships_sector_id_sectors_sector_id_fk",
+          "tableFrom": "sector_memberships",
+          "tableTo": "sectors",
+          "columnsFrom": [
+            "sector_id"
+          ],
+          "columnsTo": [
+            "sector_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        },
+        "sector_memberships_asset_id_assets_asset_id_fk": {
+          "name": "sector_memberships_asset_id_assets_asset_id_fk",
+          "tableFrom": "sector_memberships",
+          "tableTo": "assets",
+          "columnsFrom": [
+            "asset_id"
+          ],
+          "columnsTo": [
+            "asset_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {
+        "sector_memberships_pk": {
+          "name": "sector_memberships_pk",
+          "columns": [
+            "sector_id",
+            "asset_id",
+            "effective_from"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "sector_memberships_effective_order": {
+          "name": "sector_memberships_effective_order",
+          "value": "\"sector_memberships\".\"effective_to\" is null or \"sector_memberships\".\"effective_to\" > \"sector_memberships\".\"effective_from\""
+        },
+        "sector_memberships_sort_order_nonnegative": {
+          "name": "sector_memberships_sort_order_nonnegative",
+          "value": "\"sector_memberships\".\"sort_order\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.sectors": {
+      "name": "sectors",
+      "schema": "",
+      "columns": {
+        "sector_id": {
+          "name": "sector_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "sectors_sort_order_uq": {
+          "name": "sectors_sort_order_uq",
+          "columns": [
+            {
+              "expression": "sort_order",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "sectors_sector_id_format": {
+          "name": "sectors_sector_id_format",
+          "value": "\"sectors\".\"sector_id\" ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'"
+        },
+        "sectors_sort_order_nonnegative": {
+          "name": "sectors_sort_order_nonnegative",
+          "value": "\"sectors\".\"sort_order\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.asset_status": {
+      "name": "asset_status",
+      "schema": "public",
+      "values": [
+        "active",
+        "migrating",
+        "inactive"
+      ]
+    },
+    "public.ingestion_status": {
+      "name": "ingestion_status",
+      "schema": "public",
+      "values": [
+        "running",
+        "success",
+        "partial",
+        "failed"
+      ]
+    },
+    "public.instrument_status": {
+      "name": "instrument_status",
+      "schema": "public",
+      "values": [
+        "active",
+        "unavailable",
+        "delisted",
+        "migrating",
+        "ambiguous"
+      ]
+    },
+    "public.market_data_provider": {
+      "name": "market_data_provider",
+      "schema": "public",
+      "values": [
+        "coingecko",
+        "gate",
+        "okx",
+        "legacy_snapshot"
+      ]
+    },
+    "public.market_timeframe": {
+      "name": "market_timeframe",
+      "schema": "public",
+      "values": [
+        "1h",
+        "1d"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

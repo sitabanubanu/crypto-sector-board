@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1785350031827,
+      "tag": "0000_p2_asset_registry",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785385090135,
+      "tag": "0001_soft_xorn",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785388375192,
+      "tag": "0002_p3_quote_volume_semantics",
+      "breakpoints": true
+    }
+  ]
+}

@@ -20,14 +20,14 @@ export function detectSectorSignal(sector: SectorSnapshot): SectorSignal | null 
   const r24h = sector.weightedReturnPct;
   const r3d = sector.weightedReturnPct3d;
   const r7d = sector.weightedReturnPct7d;
+  const r30d = sector.weightedReturnPct30d;
 
-  // Need at least 24h + two historical periods
-  if (r3d == null || r7d == null) return null;
+  if (r24h == null || r3d == null || r7d == null || r30d == null) return null;
 
   const pos24h = r24h > 0;
   const pos3d = r3d > 0;
   const pos7d = r7d > 0;
-  const pos30d = (sector.weightedReturnPct30d ?? 0) > 0;
+  const pos30d = r30d > 0;
 
   // All 4 positive
   if (pos24h && pos3d && pos7d && pos30d) {

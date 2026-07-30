@@ -25,8 +25,11 @@ function getSectorAvgReturn(sector: SectorSnapshot, period: "24h" | "3d" | "7d" 
   return sector.weightedReturnPct;
 }
 
-function turnoverRatio(volume24h: number | undefined, marketCap: number): number | null {
-  if (!volume24h || volume24h <= 0 || marketCap <= 0) return null;
+function turnoverRatio(
+  volume24h: number | null | undefined,
+  marketCap: number | null,
+): number | null {
+  if (!volume24h || volume24h <= 0 || marketCap == null || marketCap <= 0) return null;
   return volume24h / marketCap;
 }
 
@@ -39,7 +42,7 @@ export default function CoinDetailModal({ coin, sectorName, sector, closes, onCl
   for (const p of PERIODS) {
     const cr = getCoinReturn(coin, p.key);
     const sr = getSectorAvgReturn(sector, p.key);
-    if (sr != null && sr !== 0) {
+    if (cr != null && sr != null && sr !== 0) {
       if (cr > sr) evaluations.push(`${p.key}跑赢板块`);
       else evaluations.push(`${p.key}落后板块`);
     }
@@ -125,7 +128,12 @@ export default function CoinDetailModal({ coin, sectorName, sector, closes, onCl
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 10, color: "#9ca3af", marginBottom: 2 }}>当前价格</div>
               <div style={{ fontSize: 16, fontWeight: 700, color: "#1f2328" }}>
-                ${coin.close.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
+                {coin.close == null
+                  ? "N/A"
+                  : `$${coin.close.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 6,
+                    })}`}
               </div>
             </div>
             <div style={{ flex: 1 }}>
@@ -140,7 +148,7 @@ export default function CoinDetailModal({ coin, sectorName, sector, closes, onCl
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 10, color: "#9ca3af", marginBottom: 2 }}>24h 成交量</div>
               <div style={{ fontSize: 13, fontWeight: 600, color: "#1f2328" }}>
-                {coin.volume24h != null ? formatMarketCap(coin.volume24h) : "--"}
+                {coin.volume24h != null ? formatMarketCap(coin.volume24h) : "N/A"}
               </div>
             </div>
             <div style={{ flex: 1 }}>
@@ -151,7 +159,7 @@ export default function CoinDetailModal({ coin, sectorName, sector, closes, onCl
                 )}
               </div>
               <div style={{ fontSize: 13, fontWeight: 600, color: "#1f2328" }}>
-                {turnover != null ? `${(turnover * 100).toFixed(3)}%` : "--"}
+                {turnover != null ? `${(turnover * 100).toFixed(3)}%` : "N/A"}
               </div>
             </div>
           </div>
@@ -169,7 +177,10 @@ export default function CoinDetailModal({ coin, sectorName, sector, closes, onCl
             const coinRet = getCoinReturn(coin, p.key);
             const sectorRet = getSectorAvgReturn(sector, p.key);
             const color = coinColorForPeriod(coin, p.key);
-            const barW = hasData ? Math.min(Math.abs(coinRet) * 400, 120) : 0;
+            const barW =
+              hasData && coinRet != null
+                ? Math.min(Math.abs(coinRet) * 400, 120)
+                : 0;
 
             return (
               <div
@@ -205,7 +216,7 @@ export default function CoinDetailModal({ coin, sectorName, sector, closes, onCl
                     )}
                   </>
                 ) : (
-                  <span style={{ fontSize: 11, color: "#d1d5db" }}>--</span>
+                  <span style={{ fontSize: 11, color: "#d1d5db" }}>N/A</span>
                 )}
               </div>
             );

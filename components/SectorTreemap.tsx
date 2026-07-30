@@ -41,8 +41,8 @@ export default function SectorTreemap({ snapshot, width, height, viewMode, perio
   };
 
   const root = useMemo(() => {
-    const coinWeight = (marketCap: number) => {
-      const safe = Math.max(marketCap, 1);
+    const coinWeight = (marketCap: number | null) => {
+      const safe = Math.max(marketCap ?? 0, 1);
       return Math.pow(safe, 0.4) + 800;
     };
 
@@ -74,7 +74,10 @@ export default function SectorTreemap({ snapshot, width, height, viewMode, perio
         const aCoin = a.data.coin;
         const bCoin = b.data.coin;
         if (aCoin && bCoin) {
-          return getCoinReturn(bCoin, period) - getCoinReturn(aCoin, period);
+          return (
+            (getCoinReturn(bCoin, period) ?? Number.NEGATIVE_INFINITY) -
+            (getCoinReturn(aCoin, period) ?? Number.NEGATIVE_INFINITY)
+          );
         }
         return (b.value || 0) - (a.value || 0);
       });
@@ -200,7 +203,7 @@ export default function SectorTreemap({ snapshot, width, height, viewMode, perio
                 const showPct = showText && cw > 36 && ch > 30;
 
                 // Volume-based border: thicker = higher turnover
-                const turnover = coin.volume24h && coin.marketCap > 0
+                const turnover = coin.volume24h && coin.marketCap != null && coin.marketCap > 0
                   ? coin.volume24h / coin.marketCap
                   : 0;
                 const borderW = 0.5 + Math.min(turnover * 600, 2.5);
@@ -308,7 +311,7 @@ function Tooltip({ info, period }: { info: HoverInfo; period: PeriodType }) {
   const { coin, sectorName, x, y } = info;
   const offset = 12;
   const tooltipWidth = 240;
-  const tooltipHeight = 200;
+  const tooltipHeight = 220;
   const left = Math.min(
     Math.max(x + offset, offset),
     window.innerWidth - tooltipWidth - offset
@@ -346,22 +349,51 @@ function Tooltip({ info, period }: { info: HoverInfo; period: PeriodType }) {
       <div style={{ color: "#6b7280", fontSize: 11, marginBottom: 6 }}>
         板块：{sectorName}
       </div>
-      <Row label="开盘" value={`$${coin.open.toFixed(coin.open < 1 ? 6 : 2)}`} />
-      <Row label="最高" value={`$${coin.high.toFixed(coin.high < 1 ? 6 : 2)}`} />
-      <Row label="最低" value={`$${coin.low.toFixed(coin.low < 1 ? 6 : 2)}`} />
-      <Row label="收盘" value={`$${coin.close.toFixed(coin.close < 1 ? 6 : 2)}`} />
+      <Row label="开盘" value={formatPrice(coin.open)} />
+      <Row label="最高" value={formatPrice(coin.high)} />
+      <Row label="最低" value={formatPrice(coin.low)} />
+      <Row label="当前" value={formatPrice(coin.close)} />
       <Row
         label={PERIOD_LABEL[period]}
         value={formatPct(getCoinReturn(coin, period))}
         valueColor={coinColorForPeriod(coin, period)}
       />
-      <Row label="振幅" value={`${(coin.amplitude * 100).toFixed(2)}%`} />
+      <Row
+        label="振幅"
+        value={coin.amplitude == null ? "N/A" : `${(coin.amplitude * 100).toFixed(2)}%`}
+      />
       {coin.volume24h != null && coin.volume24h > 0 && (
         <Row label="24h 成交量" value={formatMarketCap(coin.volume24h)} />
       )}
       <Row label="市值" value={formatMarketCap(coin.marketCap)} />
+      <Row
+        label="数据源"
+        value={`${coin.source ?? "snapshot"}${coin.fallbackUsed ? "（兜底）" : ""}`}
+      />
+      <Row
+        label="观测时间"
+        value={formatObservedAt(coin.observedAt)}
+      />
     </div>
   );
+}
+
+function formatPrice(value: number | null): string {
+  if (value == null || !Number.isFinite(value)) return "N/A";
+  return `$${value.toFixed(value < 1 ? 6 : 2)}`;
+}
+
+function formatObservedAt(value: string | undefined): string {
+  if (!value) return "N/A";
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "N/A";
+  return `${date.toLocaleString("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "UTC",
+  })} UTC`;
 }
 
 function Row({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {

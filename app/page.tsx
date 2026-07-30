@@ -1,31 +1,37 @@
 import HomeClient from "@/components/HomeClient";
-import { loadLatestSnapshot } from "@/lib/snapshot";
-import sectorsData from "@/data/sectors.json";
-import type { SectorsFile } from "@/lib/types";
+import { getBoardResponse } from "@/lib/server/board-data";
 
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
 
-export default function Home() {
-  const snapshot = loadLatestSnapshot();
-  const { holdings } = sectorsData as SectorsFile;
-
-  if (!snapshot) {
-    return (
-      <div
-        style={{
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "#f5f6f8",
-          color: "#6b7280",
-          fontSize: 14,
-        }}
-      >
-        暂无数据。请先运行 <code style={{ background: "#fff", padding: "2px 6px", borderRadius: 4, marginLeft: 4 }}>npm run fetch-snapshot</code>
-      </div>
+async function loadInitialBoard() {
+  try {
+    return await getBoardResponse();
+  } catch (error) {
+    console.error(
+      "Initial board render failed:",
+      error instanceof Error ? error.message : "unknown error",
     );
+    return null;
   }
+}
 
-  return <HomeClient snapshot={snapshot} holdings={holdings ?? []} />;
+export default async function Home() {
+  const initialBoard = await loadInitialBoard();
+  if (initialBoard) return <HomeClient initialBoard={initialBoard} />;
+
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "#f5f6f8",
+        color: "#6b7280",
+        fontSize: 14,
+      }}
+    >
+      市场数据暂时不可用，请稍后刷新。
+    </div>
+  );
 }

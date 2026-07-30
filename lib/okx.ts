@@ -1,292 +1,343 @@
-import type { SectorConfig, CoinSnapshot, SectorSnapshot, DailySnapshot, OkxTicker, CustomSectorConfig } from "./types";
-import { calcWeightedSectorMetrics } from "./metrics";
+import type {
+  CoinSnapshot,
+  CustomSectorConfig,
+  DailySnapshot,
+  SectorConfig,
+  SectorSnapshot,
+} from "./types";
+import {
+  calcAmplitude,
+  calcLogReturnVolatility,
+  calcLookbackReturn,
+  calcWeightedSectorMetrics,
+} from "./metrics";
+import {
+  normalizeOkxTicker,
+  parseOkxCandlesPayload,
+  parseOkxTickersPayload,
+  type OkxTickerPayload,
+} from "./market-data/provider-normalizers";
+import {
+  createDataQuality,
+  type MarketDataProvider,
+} from "./market-data/contracts";
+import {
+  isTimestampStale,
+  LIVE_DATA_STALE_AFTER_SECONDS,
+  SNAPSHOT_FALLBACK_STALE_AFTER_SECONDS,
+} from "./market-data/freshness";
+import type { CoinFallbackField } from "./types";
+import { createProviderInstrumentMap } from "./market-data/registry";
 
-// CoinGecko coin ID → OKX spot instrument ID (USDT pairs)
-export const CG_TO_OKX: Record<string, string | null> = {
-  // BTC
-  bitcoin: "BTC-USDT",
-  // Layer 1
-  ethereum: "ETH-USDT",
-  solana: "SOL-USDT",
-  binancecoin: "BNB-USDT",
-  ripple: "XRP-USDT",
-  cardano: "ADA-USDT",
-  "avalanche-2": "AVAX-USDT",
-  tron: "TRX-USDT",
-  "the-open-network": "TON-USDT",
-  polkadot: "DOT-USDT",
-  sui: "SUI-USDT",
-  aptos: "APT-USDT",
-  near: "NEAR-USDT",
-  // L2
-  arbitrum: "ARB-USDT",
-  optimism: "OP-USDT",
-  starknet: "STRK-USDT",
-  mantle: "MNT-USDT",
-  "conflux-token": "CFX-USDT",
-  // PoW
-  litecoin: "LTC-USDT",
-  "bitcoin-cash": "BCH-USDT",
-  "ethereum-classic": "ETC-USDT",
-  // DeFi
-  aave: "AAVE-USDT",
-  uniswap: "UNI-USDT",
-  "compound-governance-token": "COMP-USDT",
-  "curve-dao-token": "CRV-USDT",
-  "lido-dao": "LDO-USDT",
-  "jupiter-exchange-solana": "JUP-USDT",
-  ethena: "ENA-USDT",
-  maker: "MKR-USDT",
-  // DEX/Perp
-  hyperliquid: "HYPE-USDT",
-  "dydx-chain": "DYDX-USDT",
-  "aster-2": null, // not on OKX
-  // AI
-  bittensor: "TAO-USDT",
-  "fetch-ai": "FET-USDT",
-  "worldcoin-wld": "WLD-USDT",
-  "virtual-protocol": "VIRTUAL-USDT",
-  "render-token": "RENDER-USDT",
-  // DePIN
-  filecoin: "FIL-USDT",
-  livepeer: "LPT-USDT",
-  helium: "HNT-USDT",
-  // Meme
-  dogecoin: "DOGE-USDT",
-  pepe: "PEPE-USDT",
-  dogwifcoin: "WIF-USDT",
-  "official-trump": "TRUMP-USDT",
-  "shiba-inu": "SHIB-USDT",
-  bonk: "BONK-USDT",
-  floki: "FLOKI-USDT",
-  // Privacy
-  monero: null, // delisted from most exchanges
-  zcash: "ZEC-USDT",
-  dash: "DASH-USDT",
-  // RWA
-  "ondo-finance": "ONDO-USDT",
-  // BTC ecosystem
-  ordinals: "ORDI-USDT",
-  blockstack: "STX-USDT",
-  // Infra
-  chainlink: "LINK-USDT",
-  "ethereum-name-service": "ENS-USDT",
-  // Other
-  "pi-network": null, // not listed on major exchanges
-};
+// Canonical asset ID → active OKX spot instrument.
+// Non-active mappings remain explicit in data/assets.json and surface as null.
+export const CG_TO_OKX: Record<string, string | null> =
+  createProviderInstrumentMap("okx");
 
-// In-memory cache for tickers (5s TTL)
-let _tickerCache: { data: Map<string, OkxTicker>; ts: number } | null = null;
+let tickerCache: { data: Map<string, OkxTickerPayload>; ts: number } | null = null;
+const klinesCache = new Map<string, { data: number[]; ts: number }>();
+const klinesInFlight = new Map<
+  string,
+  Promise<{ instId: string; closes: number[] }>
+>();
+const TICKER_CACHE_MS = 5_000;
+const KLINES_CACHE_MS = 300_000;
 
-export async function fetchOkxSpotTickers(): Promise<Map<string, OkxTicker>> {
+export async function fetchOkxSpotTickers(): Promise<Map<string, OkxTickerPayload>> {
   const now = Date.now();
-  if (_tickerCache && now - _tickerCache.ts < 5000) {
-    return _tickerCache.data;
+  if (tickerCache && now - tickerCache.ts < TICKER_CACHE_MS) {
+    return tickerCache.data;
   }
 
-  const url = "/api/okx/market/tickers?instType=SPOT";
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`OKX API returned ${res.status}`);
-  }
-  const json = (await res.json()) as { code: string; data: OkxTicker[] };
-  if (json.code !== "0") {
-    throw new Error(`OKX API error code: ${json.code}`);
+  const response = await fetch("/api/okx/market/tickers?instType=SPOT");
+  if (!response.ok) throw new Error(`OKX API returned ${response.status}`);
+  const parsed = parseOkxTickersPayload(
+    await response.json(),
+    new Date(now).toISOString(),
+  );
+  if (parsed.status === "failed") {
+    throw new Error(
+      `OKX tickers failed schema validation: ${parsed.errors[0]?.message ?? "unknown error"}`,
+    );
   }
 
-  const map = new Map<string, OkxTicker>();
-  for (const t of json.data) {
-    map.set(t.instId, {
-      instId: t.instId,
-      last: t.last,
-      open24h: t.open24h,
-      high24h: t.high24h,
-      low24h: t.low24h,
-      volCcy24h: t.volCcy24h ?? "0",
-    });
-  }
-  _tickerCache = { data: map, ts: now };
+  const map = new Map(parsed.data.map((ticker) => [ticker.instId, ticker]));
+  tickerCache = { data: map, ts: now };
   return map;
 }
 
-// --- Klines (daily candles) for 3d/7d/30d calculation ---
-
-let _klinesCache: { data: Map<string, number[]>; ts: number } | null = null;
-const KLINES_CACHE_MS = 300000; // 5 minutes
-
-async function fetchOneKlines(instId: string): Promise<{ instId: string; closes: number[] }> {
-  const url = `/api/okx/market/candles?instId=${instId}&bar=1D&limit=31`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`${instId} ${res.status}`);
-  const json = await res.json();
-  if (json.code !== "0" || !Array.isArray(json.data)) {
-    throw new Error(`${instId} code ${json.code}`);
+async function fetchOneKlines(
+  instrumentId: string,
+): Promise<{ instId: string; closes: number[] }> {
+  const response = await fetch(
+    `/api/okx/market/candles?instId=${instrumentId}&bar=1D&limit=31`,
+  );
+  if (!response.ok) throw new Error(`${instrumentId} ${response.status}`);
+  const parsed = parseOkxCandlesPayload(
+    await response.json(),
+    instrumentId,
+    instrumentId,
+  );
+  if (parsed.status === "failed" || parsed.data.some((candle) => candle.close == null)) {
+    throw new Error(
+      `${instrumentId} candle schema failed: ${parsed.errors[0]?.message ?? "missing close"}`,
+    );
   }
-  return { instId, closes: json.data.map((c: string[]) => parseFloat(c[4])) };
+  return {
+    instId: instrumentId,
+    closes: parsed.data.map((candle) => candle.close!),
+  };
 }
 
-async function fetchWithRetry(instId: string, retries = 2): Promise<{ instId: string; closes: number[] }> {
-  for (let attempt = 0; attempt <= retries; attempt++) {
+async function fetchWithRetry(
+  instrumentId: string,
+  retries = 2,
+): Promise<{ instId: string; closes: number[] }> {
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
     try {
-      return await fetchOneKlines(instId);
-    } catch (e) {
-      if (attempt === retries) throw e;
-      await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+      return await fetchOneKlines(instrumentId);
+    } catch (error) {
+      if (attempt === retries) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
     }
   }
   throw new Error("unreachable");
 }
 
-export async function fetchOkxKlines(instIds: string[]): Promise<Map<string, number[]>> {
+function requestOkxKlines(
+  instrumentId: string,
+): Promise<{ instId: string; closes: number[] }> {
+  const inFlight = klinesInFlight.get(instrumentId);
+  if (inFlight) return inFlight;
+
+  const request = fetchWithRetry(instrumentId);
+  klinesInFlight.set(instrumentId, request);
+  const clearInFlight = () => {
+    if (klinesInFlight.get(instrumentId) === request) {
+      klinesInFlight.delete(instrumentId);
+    }
+  };
+  void request.then(clearInFlight, clearInFlight);
+  return request;
+}
+
+export async function fetchOkxKlines(
+  instrumentIds: string[],
+): Promise<Map<string, number[]>> {
   const now = Date.now();
-  if (_klinesCache && now - _klinesCache.ts < KLINES_CACHE_MS) {
-    return _klinesCache.data;
+  const result = new Map<string, number[]>();
+  const unique = [...new Set(instrumentIds)];
+  const pending: string[] = [];
+
+  for (const instrumentId of unique) {
+    const cached = klinesCache.get(instrumentId);
+    if (cached && now - cached.ts < KLINES_CACHE_MS) {
+      result.set(instrumentId, cached.data);
+    } else {
+      pending.push(instrumentId);
+    }
   }
 
-  const result = new Map<string, number[]>();
-  const unique = [...new Set(instIds)];
-  const BATCH = 4;
-  const BATCH_DELAY = 100;
+  for (const [instrumentId, cached] of klinesCache) {
+    if (now - cached.ts >= KLINES_CACHE_MS * 6) {
+      klinesCache.delete(instrumentId);
+    }
+  }
 
-  for (let i = 0; i < unique.length; i += BATCH) {
-    const batch = unique.slice(i, i + BATCH);
+  const batchSize = 4;
+  for (let index = 0; index < pending.length; index += batchSize) {
     const responses = await Promise.allSettled(
-      batch.map((instId) => fetchWithRetry(instId)),
+      pending
+        .slice(index, index + batchSize)
+        .map((instrumentId) => requestOkxKlines(instrumentId)),
     );
-
-    for (const r of responses) {
-      if (r.status === "fulfilled") {
-        result.set(r.value.instId, r.value.closes);
+    for (const response of responses) {
+      if (response.status === "fulfilled") {
+        klinesCache.set(response.value.instId, {
+          data: response.value.closes,
+          ts: Date.now(),
+        });
+        result.set(response.value.instId, response.value.closes);
       }
     }
-
-    if (i + BATCH < unique.length) {
-      await new Promise((r) => setTimeout(r, BATCH_DELAY));
+    if (index + batchSize < pending.length) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
   }
 
-  _klinesCache = { data: result, ts: now };
   return result;
+}
+
+function sumKnown(values: Array<number | null | undefined>): number | null {
+  const known = values.filter(
+    (value): value is number => value != null && Number.isFinite(value),
+  );
+  return known.length > 0
+    ? known.reduce((sum, value) => sum + value, 0)
+    : null;
+}
+
+function sectorFromCoins(
+  id: string,
+  name: string,
+  coins: CoinSnapshot[],
+): SectorSnapshot {
+  return {
+    id,
+    name,
+    totalMarketCap: sumKnown(coins.map((coin) => coin.marketCap)),
+    totalVolume24h: sumKnown(coins.map((coin) => coin.volume24h)),
+    ...calcWeightedSectorMetrics(coins),
+    coins,
+  };
+}
+
+function getSnapshotFallbackFields(
+  fallback: CoinSnapshot | undefined,
+): CoinFallbackField[] {
+  if (!fallback) return [];
+
+  const fields: CoinFallbackField[] = ["isMainstream"];
+  if (fallback.marketCap != null) fields.unshift("marketCap");
+  return fields;
 }
 
 export function buildSnapshotFromOkx(
   sectorsConfig: SectorConfig[],
-  okxData: Map<string, OkxTicker>,
+  okxData: Map<string, OkxTickerPayload>,
   fallbackSnapshot: DailySnapshot,
   klinesData?: Map<string, number[]>,
 ): DailySnapshot {
-  // Build a lookup from the fallback snapshot for fast access
+  const generatedAt = new Date().toISOString();
   const fallbackCoinMap = new Map<string, CoinSnapshot>();
   for (const sector of fallbackSnapshot.sectors) {
-    for (const coin of sector.coins) {
-      fallbackCoinMap.set(coin.id, coin);
-    }
+    for (const coin of sector.coins) fallbackCoinMap.set(coin.id, coin);
   }
 
-  const sectorSnapshots: SectorSnapshot[] = [];
+  const expectedAssets = new Set(sectorsConfig.flatMap((sector) => sector.coins));
+  const coveredAssets = new Set<string>();
+  const fallbackAssets = new Set<string>();
+  const missingAssets = new Set<string>();
+  const sectors: SectorSnapshot[] = [];
 
-  for (const sectorCfg of sectorsConfig) {
-    const coinSnapshots: CoinSnapshot[] = [];
-
-    for (const coinId of sectorCfg.coins) {
+  for (const sectorConfig of sectorsConfig) {
+    const coins: CoinSnapshot[] = [];
+    for (const coinId of sectorConfig.coins) {
       const fallback = fallbackCoinMap.get(coinId);
-      const okxSymbol = CG_TO_OKX[coinId];
+      const instrumentId = CG_TO_OKX[coinId];
+      const ticker = instrumentId ? okxData.get(instrumentId) : undefined;
 
-      if (okxSymbol) {
-        const ticker = okxData.get(okxSymbol);
-        if (ticker) {
-          const last = parseFloat(ticker.last);
-          const open24h = parseFloat(ticker.open24h);
-          const high24h = parseFloat(ticker.high24h);
-          const low24h = parseFloat(ticker.low24h);
-          const volume24h = parseFloat(ticker.volCcy24h) || undefined;
-
-          const returnPct = open24h > 0 ? (last - open24h) / open24h : 0;
-          const amplitude = low24h > 0 ? high24h / low24h - 1 : 0;
-          const volatility = amplitude / 2;
-
-          // Klines-based 3d/7d/30d (prefer over fallback)
-          const closes = klinesData?.get(okxSymbol);
-          const returnPct3d = closes && closes.length > 3 && closes[3] > 0
-            ? (last - closes[3]) / closes[3]
-            : fallback?.returnPct3d;
-          const returnPct7d = closes && closes.length > 7 && closes[7] > 0
-            ? (last - closes[7]) / closes[7]
-            : fallback?.returnPct7d;
-          const returnPct30d = closes && closes.length > 29 && closes[29] > 0
-            ? (last - closes[29]) / closes[29]
-            : fallback?.returnPct30d;
-
-          coinSnapshots.push({
+      if (ticker && instrumentId) {
+        const quote = normalizeOkxTicker(ticker, coinId, generatedAt);
+        if (quote.price != null) {
+          const closes = klinesData?.get(instrumentId);
+          const fallbackFields = getSnapshotFallbackFields(fallback);
+          if (fallbackFields.length > 0) fallbackAssets.add(coinId);
+          const coin: CoinSnapshot = {
             id: coinId,
-            symbol: fallback?.symbol ?? coinId.toUpperCase(),
+            symbol: instrumentId.replace(/-USDT$/i, ""),
             name: fallback?.name ?? coinId,
-            marketCap: fallback?.marketCap ?? 0,
-            open: open24h,
-            high: high24h,
-            low: low24h,
-            close: last,
-            returnPct,
-            amplitude,
-            volatility,
-            returnPct3d,
-            returnPct7d,
-            returnPct30d,
-            volume24h,
+            marketCap: fallback?.marketCap ?? null,
+            open: quote.open24h,
+            high: quote.high24h,
+            low: quote.low24h,
+            close: quote.price,
+            returnPct: quote.change24h,
+            amplitude: calcAmplitude(quote.high24h, quote.low24h),
+            volatility: calcLogReturnVolatility(closes ?? []),
+            returnPct3d: calcLookbackReturn(quote.price, closes, 3),
+            returnPct7d: calcLookbackReturn(quote.price, closes, 7),
+            returnPct30d: calcLookbackReturn(quote.price, closes, 30),
+            volume24h: quote.volume24h,
             isMainstream: fallback?.isMainstream ?? false,
-          });
+            source: "okx",
+            fallbackUsed: fallbackFields.length > 0,
+            fallbackFields,
+          };
+          coins.push(coin);
+          if (coin.returnPct != null) coveredAssets.add(coinId);
           continue;
         }
       }
 
-      // Fallback: use snapshot data entirely
       if (fallback) {
-        coinSnapshots.push(fallback);
+        fallbackAssets.add(coinId);
+        const coin: CoinSnapshot = {
+          ...fallback,
+          open: null,
+          high: null,
+          low: null,
+          close: null,
+          returnPct: null,
+          amplitude: null,
+          volatility: null,
+          returnPct3d: null,
+          returnPct7d: null,
+          returnPct30d: null,
+          volume24h: null,
+          source: "snapshot",
+          fallbackUsed: true,
+          fallbackFields: getSnapshotFallbackFields(fallback),
+        };
+        coins.push(coin);
+        if (coin.returnPct != null) coveredAssets.add(coinId);
       } else {
-        console.warn(`Coin ${coinId} not found in OKX or fallback snapshot`);
+        missingAssets.add(coinId);
       }
     }
-
-    const totalMarketCap = coinSnapshots.reduce((sum, c) => sum + c.marketCap, 0);
-    const totalVolume24h = coinSnapshots.reduce((sum, c) => sum + (c.volume24h ?? 0), 0);
-    const weighted = calcWeightedSectorMetrics(coinSnapshots);
-
-    sectorSnapshots.push({
-      id: sectorCfg.id,
-      name: sectorCfg.name,
-      totalMarketCap,
-      totalVolume24h: totalVolume24h > 0 ? totalVolume24h : undefined,
-      ...weighted,
-      coins: coinSnapshots,
-    });
+    sectors.push(sectorFromCoins(sectorConfig.id, sectorConfig.name, coins));
   }
+  const fallbackAsOf =
+    fallbackAssets.size > 0
+      ? fallbackSnapshot.dataQuality?.asOf ?? fallbackSnapshot.generatedAt
+      : undefined;
+  const staleSources: MarketDataProvider[] =
+    fallbackAsOf &&
+    isTimestampStale(
+      fallbackAsOf,
+      SNAPSHOT_FALLBACK_STALE_AFTER_SECONDS,
+      Date.parse(generatedAt),
+    )
+      ? ["snapshot"]
+      : [];
 
   return {
-    date: fallbackSnapshot.date, // keep snapshot date for 7d/30d alignment
-    generatedAt: new Date().toISOString(),
+    date: generatedAt.slice(0, 13),
+    generatedAt,
     source: "okx",
-    sectors: sectorSnapshots,
+    dataQuality: createDataQuality({
+      asOf: generatedAt,
+      generatedAt,
+      sources: fallbackAssets.size > 0 ? ["okx", "snapshot"] : ["okx"],
+      fallbackAssets: [...fallbackAssets],
+      missingAssets: [...missingAssets],
+      coverageRatio:
+        expectedAssets.size > 0 ? coveredAssets.size / expectedAssets.size : 0,
+      isStale: staleSources.length > 0,
+      staleAfterSeconds: LIVE_DATA_STALE_AFTER_SECONDS,
+      sourceAsOf: {
+        okx: generatedAt,
+        ...(fallbackAsOf ? { snapshot: fallbackAsOf } : {}),
+      },
+      staleSources,
+    }),
+    sectors,
   };
 }
 
-export function getOkxUsdtSpotIds(okxData: Map<string, OkxTicker>): string[] {
-  const ids: string[] = [];
-  for (const instId of okxData.keys()) {
-    if (instId.endsWith("-USDT")) {
-      ids.push(instId);
-    }
-  }
-  ids.sort();
-  return ids;
+export function getOkxUsdtSpotIds(okxData: Map<string, OkxTickerPayload>): string[] {
+  return [...okxData.keys()]
+    .filter((instrumentId) => instrumentId.endsWith("-USDT"))
+    .sort();
 }
 
 export function buildCustomSectorsFromOkx(
   customSectors: CustomSectorConfig[],
-  okxData: Map<string, OkxTicker>,
+  okxData: Map<string, OkxTickerPayload>,
   fallbackSnapshot: DailySnapshot,
   klinesData?: Map<string, number[]>,
 ): SectorSnapshot[] {
-  // Build fallback lookup by uppercase symbol
+  const generatedAt = new Date().toISOString();
   const fallbackBySymbol = new Map<string, CoinSnapshot>();
   for (const sector of fallbackSnapshot.sectors) {
     for (const coin of sector.coins) {
@@ -295,82 +346,50 @@ export function buildCustomSectorsFromOkx(
   }
 
   const result: SectorSnapshot[] = [];
-
-  for (const cs of customSectors) {
-    const coinSnapshots: CoinSnapshot[] = [];
-
-    for (const instId of cs.coins) {
-      const ticker = okxData.get(instId);
-      if (!ticker) {
-        console.warn(`Custom sector coin ${instId} not found in OKX data`);
-        continue;
-      }
-
-      const last = parseFloat(ticker.last);
-      const open24h = parseFloat(ticker.open24h);
-      const high24h = parseFloat(ticker.high24h);
-      const low24h = parseFloat(ticker.low24h);
-      const volume24h = parseFloat(ticker.volCcy24h) || undefined;
-
-      const returnPct = open24h > 0 ? (last - open24h) / open24h : 0;
-      const amplitude = low24h > 0 ? high24h / low24h - 1 : 0;
-      const volatility = amplitude / 2;
-
-      // Extract symbol from instId: "BTC-USDT" → "BTC"
-      const symbol = instId.replace(/-USDT$/i, "");
-
+  for (const customSector of customSectors) {
+    const coins: CoinSnapshot[] = [];
+    for (const instrumentId of customSector.coins) {
+      const ticker = okxData.get(instrumentId);
+      if (!ticker) continue;
+      const symbol = instrumentId.replace(/-USDT$/i, "");
       const fallback = fallbackBySymbol.get(symbol.toUpperCase());
+      const quote = normalizeOkxTicker(
+        ticker,
+        `custom-${instrumentId}`,
+        generatedAt,
+      );
+      if (quote.price == null) continue;
+      const closes = klinesData?.get(instrumentId);
+      const fallbackFields = getSnapshotFallbackFields(fallback).filter(
+        (field) => field === "marketCap",
+      );
 
-      // Klines-based 3d/7d/30d
-      const closes = klinesData?.get(instId);
-      const returnPct3d = closes && closes.length > 3 && closes[3] > 0
-        ? (last - closes[3]) / closes[3]
-        : fallback?.returnPct3d;
-      const returnPct7d = closes && closes.length > 7 && closes[7] > 0
-        ? (last - closes[7]) / closes[7]
-        : fallback?.returnPct7d;
-      const returnPct30d = closes && closes.length > 29 && closes[29] > 0
-        ? (last - closes[29]) / closes[29]
-        : fallback?.returnPct30d;
-
-      coinSnapshots.push({
-        id: `custom-${instId}`,
+      coins.push({
+        id: `custom-${instrumentId}`,
         symbol,
         name: fallback?.name ?? symbol,
-        marketCap: fallback?.marketCap ?? 1e9,
-        open: open24h,
-        high: high24h,
-        low: low24h,
-        close: last,
-        returnPct,
-        amplitude,
-        volatility,
-        returnPct3d,
-        returnPct7d,
-        returnPct30d,
-        volume24h,
+        marketCap: fallback?.marketCap ?? null,
+        open: quote.open24h,
+        high: quote.high24h,
+        low: quote.low24h,
+        close: quote.price,
+        returnPct: quote.change24h,
+        amplitude: calcAmplitude(quote.high24h, quote.low24h),
+        volatility: calcLogReturnVolatility(closes ?? []),
+        returnPct3d: calcLookbackReturn(quote.price, closes, 3),
+        returnPct7d: calcLookbackReturn(quote.price, closes, 7),
+        returnPct30d: calcLookbackReturn(quote.price, closes, 30),
+        volume24h: quote.volume24h,
         isMainstream: true,
+        source: "okx",
+        fallbackUsed: fallbackFields.length > 0,
+        fallbackFields,
       });
     }
 
-    if (coinSnapshots.length === 0) {
-      // Sector with no valid coins — skip
-      continue;
+    if (coins.length > 0) {
+      result.push(sectorFromCoins(customSector.id, customSector.name, coins));
     }
-
-    const totalMarketCap = coinSnapshots.reduce((sum, c) => sum + c.marketCap, 0);
-    const totalVolume24h = coinSnapshots.reduce((sum, c) => sum + (c.volume24h ?? 0), 0);
-    const weighted = calcWeightedSectorMetrics(coinSnapshots);
-
-    result.push({
-      id: cs.id,
-      name: cs.name,
-      totalMarketCap,
-      totalVolume24h: totalVolume24h > 0 ? totalVolume24h : undefined,
-      ...weighted,
-      coins: coinSnapshots,
-    });
   }
-
   return result;
 }

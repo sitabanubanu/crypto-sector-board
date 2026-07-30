@@ -1,0 +1,26 @@
+{
+  "code": "0",
+  "msg": "",
+  "data": [
+    {
+      "instType": "SPOT",
+      "instId": "BTC-USDT",
+      "last": "64000",
+      "open24h": "64000",
+      "high24h": "65000",
+      "low24h": "63000",
+      "volCcy24h": "80032000",
+      "ts": "1785369600000"
+    },
+    {
+      "instType": "SPOT",
+      "instId": "PEOPLE-EUR",
+      "last": "0.017",
+      "open24h": "0.016",
+      "high24h": "0.018",
+      "low24h": "0.015",
+      "volCcy24h": "350000",
+      "ts": "1785369600000"
+    }
+  ]
+}

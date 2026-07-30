@@ -67,9 +67,9 @@
 - 展示：总收益、胜率、最大回撤、月度收益、被选板块表现
 
 ### ✏️ 板块管理器
-- 网页内直接增删改板块和币种
-- 搜索 Gate.io 现货交易对
-- 保存后自动提交（本地开发写文件，生产环境通过 GitHub API 提交 PR）
+- 当前只读；匿名写接口已经关闭
+- 内置板块通过 `data/sectors.json` 和 Pull Request 维护
+- 认证管理端将在后续阶段重新开放
 
 ### ⚙️ 自选板块编辑器
 - 内置板块一键开关
@@ -94,12 +94,13 @@
 
 | 层级 | 数据源 | 用途 | 刷新 |
 |---|---|---|---|
-| **主力** | Gate.io | 实时价格、24h 涨跌、K 线 | 30 秒 |
-| **兜底** | OKX | Gate.io 没有的币（如 ONDO）自动切换 | 30 秒 |
-| **末端** | CoinGecko | 两边都没有的币（如 XMR、Aster） | 30 秒 |
-| **历史** | 快照归档 | 7d / 30d 基准数据 | 每小时 |
+| **主行情** | Gate.io | quote、24h、`1h` K 线 | 每小时采集 |
+| **补充/回退** | OKX | Gate 缺失时的 quote 与 K 线 | 每小时采集 |
+| **市值/末端回退** | CoinGecko | market cap、无交易所币种 quote | 每小时采集 |
+| **页面主读** | PostgreSQL BFF | board、candles、批量 history | 30 秒 / 5 分钟缓存 |
+| **回滚读取** | 只读 JSON 快照 | `DATA_BACKEND=json` 紧急回滚 | 不再自动新增 |
 
-> 三层 fallback 保证所有币种都有数据。浏览器直连交易所公开 API，不经任何代理。Gate.io 国内可访问，无需翻墙。
+> 浏览器不直连上游，也不再逐币请求 K 线；56 个资产的 31 天历史合并为一个 BFF 请求。缺失数据会显示 `N/A`，不会承诺或伪造“所有币都有数据”。DB 模式可双读旧 JSON 比较，出现故障时可一键回滚。
 
 ---
 
@@ -113,20 +114,38 @@ npm install
 npm run dev          # → http://localhost:3000
 
 # 构建
-npm run build        # 纯静态输出，零服务器
+npm run build
 
-# 手动抓取快照（补充历史数据）
-npm run fetch-snapshot
+# 完整离线质量门
+npm run check
 
-# 手动发送 Telegram 推送
-npm run telegram-push
+# 检查资产注册表与 migration
+npm run registry:check
+npm run db:check
+
+# 有 DATABASE_URL 后初始化 PostgreSQL
+npm run db:setup
+
+# P3：采集、迁移旧快照和数据健康
+npm run ingest-market-data
+npm run db:import-legacy
+npm run data:health
+
+# 数据库与采集集成测试
+npm run test:integration
 ```
 
-### 环境变量（可选）
+### 环境变量
 
 | 变量 | 说明 |
 |---|---|
+| `DATABASE_URL` | PostgreSQL pooled connection string；BFF、采集和 data-health 必需 |
+| `DATABASE_POOL_MAX` | serverless 单进程连接上限，默认 1，允许 1～10 |
+| `DATA_BACKEND` | 页面读路径：`db`（默认）或 `json`（回滚） |
+| `DATA_DUAL_READ` | DB 模式下是否比较最后有效 JSON，默认 `true` |
 | `COINGECKO_API_KEY` | CoinGecko Pro API 密钥，提升频率上限 |
+| `INGEST_*_BACKFILL_HOURS` | 首次、修复和最大补洞窗口；默认 24/24/168 |
+| `INGEST_HISTORY_BACKFILL_HOURS` | 仅一次性深历史补齐使用；定时任务保持未设置 |
 | `TELEGRAM_BOT_TOKEN` | Telegram Bot Token，用于推送 |
 | `TELEGRAM_CHAT_ID` | Telegram 接收人 Chat ID |
 | `GITHUB_TOKEN` | GitHub PAT，用于网页内编辑板块清单 |
@@ -135,12 +154,14 @@ npm run telegram-push
 
 ## 🧱 技术栈
 
-**Next.js 16** (App Router + Turbopack) · **React 19** · **TypeScript** · **D3.js** (hierarchy + scale) · **Gate.io / OKX / CoinGecko API** · **Vercel** · **GitHub Actions**
+**Next.js 16** (App Router + Turbopack) · **React 19** · **TypeScript** · **D3.js** · **SWR** · **PostgreSQL + Drizzle** · **Gate.io / OKX / CoinGecko API** · **Vercel**
 
-- 纯静态部署 + Edge API Routes，零服务器成本
-- 交易所数据浏览器直连，三层 fallback 自动切换
+- 服务端首屏 + server-only DAL + 版本化 BFF
+- 规范资产注册表统一三家 provider instrument
+- PostgreSQL migration、seed、幂等采集和自动补洞已就绪
+- board 30 秒缓存、批量 history 5 分钟缓存，支持 DB/JSON 双读和回滚
 - 自选配置存 localStorage，隐私零泄露
-- GitHub Actions 每小时自动抓取快照 + Telegram 推送
+- GitHub Actions 每小时只写数据库，不提交数据文件、不触发部署
 - 支持 CoinGecko Pro API 密钥，解锁更高频率
 
 ---
@@ -150,16 +171,16 @@ npm run telegram-push
 ```
 crypto-sector-board/
 ├── app/
-│   ├── page.tsx                          # 服务端入口（读取快照+持仓）
+│   ├── page.tsx                          # 服务端入口（直接调用 board DAL）
 │   ├── layout.tsx                        # 根布局
 │   └── api/
-│       ├── cg/[...path]/route.ts         # CoinGecko 边缘代理
-│       ├── gate/[...path]/route.ts       # Gate.io 边缘代理
-│       ├── okx/[...path]/route.ts        # OKX 边缘代理
-│       ├── sectors/route.ts              # 板块清单 CRUD
-│       └── snapshots/route.ts            # 历史快照查询
+│       ├── v1/board/route.ts             # 当前看板 BFF
+│       ├── v1/candles/route.ts           # 单资产小时 K 线
+│       ├── v1/history/route.ts           # 多资产批量日级历史
+│       └── v1/data-health/route.ts        # 数据 SLO
 ├── components/
-│   ├── HomeClient.tsx                    # 数据调度中枢 + OKX/CoinGecko 实时更新
+│   ├── HomeClient.tsx                    # 看板交互与展示编排
+│   ├── board/use-board-data.ts           # board/history SWR
 │   ├── SectorTreemap.tsx                 # D3 嵌套方块热力图
 │   ├── TrendBarChart.tsx                 # 四周期并排柱状图 + 信号列
 │   ├── Header.tsx                        # 顶栏：周期/视图/预设/状态
@@ -181,15 +202,28 @@ crypto-sector-board/
 │   ├── presets.ts                        # 板块预设定义
 │   ├── watchlist.ts                      # 自选 localStorage 持久化
 │   ├── snapshot.ts                       # 快照读写
+│   ├── db/                               # Drizzle schema、连接和 reference seed
+│   ├── ingestion/                        # P3 adapter、补洞、重试、健康报告
+│   ├── market-data/                      # P4 契约、聚合、双读比较
+│   ├── server/                           # server-only DAL、缓存、后端切换
 │   └── types.ts                          # 全局类型定义
 ├── data/
-│   ├── sectors.json                      # 14 板块 / ~60 币种 / 持仓配置
+│   ├── assets.json                       # 56 资产 / 168 provider 状态
+│   ├── sectors.json                      # v2 规范 assetIds 板块配置
 │   └── snapshots/                        # 历史快照归档
+├── drizzle/                              # PostgreSQL SQL migrations + metadata
 ├── scripts/
 │   ├── fetch-snapshot.ts                 # CoinGecko 快照抓取
+│   ├── db-migrate.ts / db-seed.ts        # 数据库初始化
+│   ├── ingest-market-data.ts             # P3 幂等行情采集
+│   ├── import-legacy-snapshots.ts         # 旧快照迁移
+│   ├── data-health.ts                    # 数据健康命令
+│   ├── verify-provider-mappings.ts        # 在线映射巡检
 │   └── send-telegram.ts                  # Telegram 推送
 └── .github/workflows/
-    └── hourly-snapshot.yml               # 每小时自动抓取 + 推送
+    ├── quality.yml                       # PR / main 质量门
+    ├── ingest.yml                        # 每小时只写 PostgreSQL
+    └── data-health.yml                   # 每日数据质量检查
 ```
 
 ---
