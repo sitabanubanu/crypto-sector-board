@@ -1,233 +1,192 @@
-# 🧊 加密板块强弱看板
+<p align="center">
+  <img src="./assets/readme/hero.svg" width="100%" alt="加密板块强弱看板：把 56 个资产归入 14 个板块并比较四个时间周期">
+</p>
 
-> **一眼看穿 14 个加密板块的资金流向，比 99% 的交易者更快发现轮动机会。**
+<p align="center">
+  <a href="https://crypto-sector-board.vercel.app"><img src="https://img.shields.io/badge/Live-Vercel-111827?logo=vercel&logoColor=white" alt="Vercel Production"></a>
+  <a href="https://github.com/sitabanubanu/crypto-sector-board/actions/workflows/quality.yml"><img src="https://github.com/sitabanubanu/crypto-sector-board/actions/workflows/quality.yml/badge.svg?branch=main" alt="Quality workflow"></a>
+  <img src="https://img.shields.io/badge/Next.js-16-000000?logo=next.js" alt="Next.js 16">
+  <img src="https://img.shields.io/badge/PostgreSQL-Neon-336791?logo=postgresql&logoColor=white" alt="PostgreSQL on Neon">
+</p>
 
-[![Deploy](https://img.shields.io/badge/Vercel-Deployed-black?logo=vercel)](https://crypto-sector-board.vercel.app)
-[![Stack](https://img.shields.io/badge/Next.js-16-000?logo=next.js)](https://nextjs.org)
-[![Data](https://img.shields.io/badge/Data-Gate.io%20%7C%20OKX%20%7C%20CoinGecko-38a169)](https://www.okx.com)
+<p align="center">
+  <a href="https://crypto-sector-board.vercel.app"><strong>打开在线看板</strong></a>
+  ·
+  <a href="https://github.com/sitabanubanu/crypto-sector-board#本地运行">本地运行</a>
+  ·
+  <a href="./docs/06-runbook.md">运维手册</a>
+</p>
 
----
+这是一个面向个人观察的加密市场结构看板。它把 **56 个资产**归入
+**14 个板块**，用 Treemap 和同口径历史数据比较
+**24h / 3d / 7d / 30d** 强弱。面积代表市值权重，颜色代表涨跌：
+**红涨、绿跌**。
 
-## 👀 这是什么
+<p align="center">
+  <a href="https://crypto-sector-board.vercel.app">
+    <img src="./assets/readme/product.png" width="100%" alt="Production 实景：14 个加密板块的 Treemap 与多周期强弱对比">
+  </a>
+</p>
 
-一个为短线交易者设计的**加密板块实时看板**。把 ~60 个主流币按 14 个板块嵌套展示，**红涨绿跌**，面积反映市值权重。不是看零散的涨跌幅列表——你看的是**板块级别的资金结构**。
+<p align="center"><sub>Production 实景；行情和排序会随数据刷新变化。</sub></p>
 
-### 看一眼就知道
+## 一眼看到什么
 
-- 今天资金在猛攻哪个板块（方块大红 + 粗边框 = 高换手率）
-- 哪些板块在持续走强/走弱（24h / 3d / 7d / 30d 四列并排）
-- 有没有轮动信号（🔥 强势确认 / 💰 回调机会 / ⚠️ 诱多陷阱 / ❄️ 弱势回避）
-- 你的持仓今天表现如何（金色 ★ 标记 + 持仓汇总面板）
-- 板块之间有没有同涨同跌（相关性热力图）
-- 如果按轮动策略调仓，历史收益会是多少（回测面板）
+- **市场结构**：Treemap 同时展示板块和币种，避免在零散涨跌榜里来回切换。
+- **周期分歧**：24h、3d、7d、30d 并排，缺失历史明确显示为 `N/A`。
+- **数据可信度**：页面显示 backend、source、freshness、coverage 和 fallback。
+- **继续下钻**：点击币种查看价格、市值、成交量和历史；自选板块保存在本地浏览器。
 
----
+当前主路径已经从“浏览器逐币请求 + Git 快照”切换为
+“PostgreSQL + server-only DAL + 版本化 BFF”。浏览器不会直接访问交易所，
+每小时采集也不会再提交 JSON 或触发一次网站部署。
 
-## 🔥 功能清单
+## 当前状态与边界
 
-### 🗺️ 板块热力图 (Treemap)
-- 14 个内置板块：BTC / L1 / L2 / PoW / DeFi / 衍生品 DEX / AI / DePIN / Meme / 隐私 / RWA / BTC生态 / 基础设施 / 其他
-- D3.js squarified treemap 布局，面积 = 板块市值，颜色 = 涨跌幅
-- **红涨绿跌** 9 档色阶（中国交易者习惯）
-- 悬停看板块 OHLC、振幅、市值；点击任意币种弹出详情弹窗
-- 成交量融入视觉：边框粗细 = 换手率，一眼识别资金活跃度
-- 视图切换：详细 / 总览 / 分屏 / 柱状图全屏 / 板块全屏
+已完成的 P0～P4：
 
-### 📊 多周期柱状图
-- **24h / 3d / 7d / 30d 四列并排**，同屏对比短中长期趋势
-- 板块名旁圆点 = 成交量占比，资金集中度一目了然
-- 信号列自动标注轮动信号图标
-- 底部附交易用法速查
+- 安全边界、依赖审计和自动质量门。
+- 56 资产 / 168 provider 状态的规范注册表。
+- PostgreSQL migration、seed、幂等采集、重试和自动补洞。
+- `/api/v1/board`、`candles`、批量 `history` 和 `data-health`。
+- DB/JSON 双读比较，以及 `DATA_BACKEND=json` 只读回滚路径。
+- Production 与每小时数据库采集已经上线。
 
-### 🔍 币种详情弹窗
-- 当前价格、24h 成交量、市值
-- 四周期涨跌条（24h / 3d / 7d / 30d）
-- 与板块均值对比，标明跑赢/跑输
-- **7 日迷你 K 线**（SVG 折线图 + 面积填充）
+> [!WARNING]
+> 这是数据可视化与工程实验项目，不构成投资建议。持仓语义、轮动信号、
+> 相关性和回测仍是实验功能，计划在 P5 校正后再作为决策能力介绍。
 
-### 🔄 板块轮动信号
-- 自动检测四种信号：强势确认 🔥 / 弱势回避 ❄️ / 回调机会 💰 / 诱多陷阱 ⚠️
-- 算法：四周期方向一致性判断
-- Treemap 和柱状图同时展示
+当前已知边界：
 
-### ⭐ 持仓标记
-- `data/sectors.json` 中配置持仓币种
-- Treemap 上持有币显示金色五角星
-- 右上角持仓汇总面板：总市值、24h 加权收益、逐币明细
+- Preview 与 Production 暂时共用同一套 Neon Free 数据库，只适合当前个人、低流量使用。
+- MKR、XMR 没有可用的 Gate/OKX 现货历史，相应历史必须保持缺失，不能用其他资产代替。
+- 移动端具备基础布局，但窄屏柱状图仍有 SVG 负宽度错误，完整移动体验留在 P6 修复。
+- Telegram 推送脚本仍在仓库中，但没有接入当前每小时采集 workflow。
 
-### 📈 板块相关性热力图
-- 14×14 Pearson 相关系数矩阵
-- 红 = 正相关，绿 = 负相关，深浅 = 强度
-- 悬停显示具体系数
-- 用途：避免重仓高度相关的板块（如 AI 和 Meme 相关系数 0.85）
+## 数据路径
 
-### 🧪 策略回测
-- 简易轮动策略：每日选涨幅前 3 板块，等权持有 1 天
-- 对比 BTC 基准，计算 α 超额收益
-- 展示：总收益、胜率、最大回撤、月度收益、被选板块表现
+<p align="center">
+  <img src="./assets/readme/data-path.svg" width="100%" alt="Gate、OKX 和 CoinGecko 经每小时采集写入 PostgreSQL，再由 BFF 提供给 Next.js 页面，并保留 JSON 回滚路径">
+</p>
 
-### ✏️ 板块管理器
-- 当前只读；匿名写接口已经关闭
-- 内置板块通过 `data/sectors.json` 和 Pull Request 维护
-- 认证管理端将在后续阶段重新开放
+1. Gate.io 和 OKX 提供 quote 与 `1h` K 线；CoinGecko 补充市值和末端 quote。
+2. GitHub Actions 每小时运行，处理限流重试、幂等写入和游标补洞。
+3. PostgreSQL 保存 latest quotes、小时 K 线、运行记录和资产注册表。
+4. Next.js 通过窄 BFF 返回 board、candles、history 和健康状态。
+5. 数据库读路径异常时，可以切到只读 JSON；回滚读取不会删除数据库数据。
 
-### ⚙️ 自选板块编辑器
-- 内置板块一键开关
-- 创建自定义板块：命名 + 搜索 Gate.io USDT 交易对
-- localStorage 自动保存，跨会话保留
+## 接口
 
-### 🎛️ 多策略预设
-- 一键切换：全板块 / 主流链 / 激进 / 防御 / 基建
-- 预设自动同步到自选配置，也可手动微调
+| Endpoint | 用途 | 缓存 |
+|---|---|---:|
+| `GET /api/v1/board` | 当前板块、资产、来源和覆盖率 | 30 秒 |
+| `GET /api/v1/candles?assetId=bitcoin&limit=48` | 单资产 `1h` K 线 | 5 分钟 |
+| `GET /api/v1/history?assetIds=bitcoin,ethereum&days=31` | 多资产批量日级历史 | 5 分钟 |
+| `GET /api/v1/data-health` | provider、K 线、quote 和运行健康 | 不缓存 |
 
-### 📱 移动端适配
-- 手机浏览器打开自动切换紧凑布局
-- 列表视图 + 自适应字号
+错误查询返回窄错误对象；内部异常不会向客户端暴露连接串或上游凭据。
 
-### 📡 Telegram 推送
-- 每小时自动推送板块摘要（Top 5 + Bottom 3 + 信号 + BTC）
-- GitHub Actions 定时执行，无需服务器
+## 本地运行
 
----
-
-## ⚡ 数据引擎
-
-| 层级 | 数据源 | 用途 | 刷新 |
-|---|---|---|---|
-| **主行情** | Gate.io | quote、24h、`1h` K 线 | 每小时采集 |
-| **补充/回退** | OKX | Gate 缺失时的 quote 与 K 线 | 每小时采集 |
-| **市值/末端回退** | CoinGecko | market cap、无交易所币种 quote | 每小时采集 |
-| **页面主读** | PostgreSQL BFF | board、candles、批量 history | 30 秒 / 5 分钟缓存 |
-| **回滚读取** | 只读 JSON 快照 | `DATA_BACKEND=json` 紧急回滚 | 不再自动新增 |
-
-> 浏览器不直连上游，也不再逐币请求 K 线；56 个资产的 31 天历史合并为一个 BFF 请求。缺失数据会显示 `N/A`，不会承诺或伪造“所有币都有数据”。DB 模式可双读旧 JSON 比较，出现故障时可一键回滚。
-
----
-
-## 🛠️ 本地运行
+最快路径不要求数据库：缺少数据库连接时，页面自动使用仓库中的只读 JSON。
 
 ```bash
-# 安装
+git clone https://github.com/sitabanubanu/crypto-sector-board.git
+cd crypto-sector-board
 npm install
+npm run dev
+```
 
-# 开发
-npm run dev          # → http://localhost:3000
+打开 `http://localhost:3000`。
 
-# 构建
-npm run build
+要使用完整数据库路径，复制 `.env.example` 为 `.env.local`，填写隔离的
+`DATABASE_URL`，然后运行：
 
-# 完整离线质量门
-npm run check
-
-# 检查资产注册表与 migration
-npm run registry:check
-npm run db:check
-
-# 有 DATABASE_URL 后初始化 PostgreSQL
+```bash
 npm run db:setup
-
-# P3：采集、迁移旧快照和数据健康
 npm run ingest-market-data
-npm run db:import-legacy
 npm run data:health
-
-# 数据库与采集集成测试
-npm run test:integration
 ```
 
-### 环境变量
+### 质量门
 
-| 变量 | 说明 |
+```bash
+npm run check
+```
+
+`check` 会依次执行 ESLint、TypeScript、资产注册表、migration 校验、Vitest、
+生产依赖审计、完整审计策略和 Next.js production build。
+
+<details>
+<summary><strong>主要环境变量</strong></summary>
+
+| 变量 | 作用 |
 |---|---|
-| `DATABASE_URL` | PostgreSQL pooled connection string；BFF、采集和 data-health 必需 |
-| `DATABASE_POOL_MAX` | serverless 单进程连接上限，默认 1，允许 1～10 |
-| `DATA_BACKEND` | 页面读路径：`db`（默认）或 `json`（回滚） |
-| `DATA_DUAL_READ` | DB 模式下是否比较最后有效 JSON，默认 `true` |
-| `COINGECKO_API_KEY` | CoinGecko Pro API 密钥，提升频率上限 |
-| `INGEST_*_BACKFILL_HOURS` | 首次、修复和最大补洞窗口；默认 24/24/168 |
-| `INGEST_HISTORY_BACKFILL_HOURS` | 仅一次性深历史补齐使用；定时任务保持未设置 |
-| `TELEGRAM_BOT_TOKEN` | Telegram Bot Token，用于推送 |
-| `TELEGRAM_CHAT_ID` | Telegram 接收人 Chat ID |
-| `GITHUB_TOKEN` | GitHub PAT，用于网页内编辑板块清单 |
+| `DATABASE_URL` | 服务端 PostgreSQL pooled connection string |
+| `DATABASE_POOL_MAX` | serverless 单进程连接上限，默认 `1` |
+| `DATA_BACKEND` | `db` 主路径或 `json` 回滚路径 |
+| `DATA_DUAL_READ` | DB 模式下是否比较最后一份有效 JSON |
+| `COINGECKO_API_KEY` | 可选 CoinGecko Pro key，只能放在服务端 |
+| `INGEST_INITIAL_BACKFILL_HOURS` | 首次采集窗口 |
+| `INGEST_REPAIR_LOOKBACK_HOURS` | 内部缺口检查窗口 |
+| `INGEST_MAX_BACKFILL_HOURS` | 单次自动补洞上限 |
+| `INGEST_HISTORY_BACKFILL_HOURS` | 一次性深历史补齐；不得写入定时 workflow |
 
----
+完整示例见 [`.env.example`](./.env.example)。
 
-## 🧱 技术栈
+</details>
 
-**Next.js 16** (App Router + Turbopack) · **React 19** · **TypeScript** · **D3.js** · **SWR** · **PostgreSQL + Drizzle** · **Gate.io / OKX / CoinGecko API** · **Vercel**
+<details>
+<summary><strong>项目结构</strong></summary>
 
-- 服务端首屏 + server-only DAL + 版本化 BFF
-- 规范资产注册表统一三家 provider instrument
-- PostgreSQL migration、seed、幂等采集和自动补洞已就绪
-- board 30 秒缓存、批量 history 5 分钟缓存，支持 DB/JSON 双读和回滚
-- 自选配置存 localStorage，隐私零泄露
-- GitHub Actions 每小时只写数据库，不提交数据文件、不触发部署
-- 支持 CoinGecko Pro API 密钥，解锁更高频率
-
----
-
-## 📂 项目结构
-
-```
-crypto-sector-board/
-├── app/
-│   ├── page.tsx                          # 服务端入口（直接调用 board DAL）
-│   ├── layout.tsx                        # 根布局
-│   └── api/
-│       ├── v1/board/route.ts             # 当前看板 BFF
-│       ├── v1/candles/route.ts           # 单资产小时 K 线
-│       ├── v1/history/route.ts           # 多资产批量日级历史
-│       └── v1/data-health/route.ts        # 数据 SLO
-├── components/
-│   ├── HomeClient.tsx                    # 看板交互与展示编排
-│   ├── board/use-board-data.ts           # board/history SWR
-│   ├── SectorTreemap.tsx                 # D3 嵌套方块热力图
-│   ├── TrendBarChart.tsx                 # 四周期并排柱状图 + 信号列
-│   ├── Header.tsx                        # 顶栏：周期/视图/预设/状态
-│   ├── CoinDetailModal.tsx               # 币种详情弹窗 + 7 日迷你 K 线
-│   ├── WatchlistEditor.tsx               # 自选板块开关 + 自定义板块
-│   ├── SectorManager.tsx                 # 网页内板块清单编辑器
-│   ├── PortfolioSummary.tsx              # 持仓汇总面板（金色 ★ 标记）
-│   ├── CorrelationHeatmap.tsx            # 板块相关性矩阵热力图
-│   └── BacktestPanel.tsx                 # 策略回测面板
-├── lib/
-│   ├── gate.ts                           # Gate.io 数据抓取 + 快照构建
-│   ├── okx.ts                            # OKX API + 符号映射
-│   ├── coingecko.ts                      # CoinGecko API + K 线获取
-│   ├── metrics.ts                        # 市值加权指标计算
-│   ├── colors.ts                         # 红涨绿跌色盘
-│   ├── signals.ts                        # 板块轮动信号检测
-│   ├── correlation.ts                    # Pearson 相关性矩阵
-│   ├── backtest.ts                       # 策略回测引擎
-│   ├── presets.ts                        # 板块预设定义
-│   ├── watchlist.ts                      # 自选 localStorage 持久化
-│   ├── snapshot.ts                       # 快照读写
-│   ├── db/                               # Drizzle schema、连接和 reference seed
-│   ├── ingestion/                        # P3 adapter、补洞、重试、健康报告
-│   ├── market-data/                      # P4 契约、聚合、双读比较
-│   ├── server/                           # server-only DAL、缓存、后端切换
-│   └── types.ts                          # 全局类型定义
-├── data/
-│   ├── assets.json                       # 56 资产 / 168 provider 状态
-│   ├── sectors.json                      # v2 规范 assetIds 板块配置
-│   └── snapshots/                        # 历史快照归档
-├── drizzle/                              # PostgreSQL SQL migrations + metadata
-├── scripts/
-│   ├── fetch-snapshot.ts                 # CoinGecko 快照抓取
-│   ├── db-migrate.ts / db-seed.ts        # 数据库初始化
-│   ├── ingest-market-data.ts             # P3 幂等行情采集
-│   ├── import-legacy-snapshots.ts         # 旧快照迁移
-│   ├── data-health.ts                    # 数据健康命令
-│   ├── verify-provider-mappings.ts        # 在线映射巡检
-│   └── send-telegram.ts                  # Telegram 推送
-└── .github/workflows/
-    ├── quality.yml                       # PR / main 质量门
-    ├── ingest.yml                        # 每小时只写 PostgreSQL
-    └── data-health.yml                   # 每日数据质量检查
+```text
+app/api/v1/          board / candles / history / data-health
+components/          Treemap、趋势图、详情和实验功能
+data/                资产注册表、板块配置和只读快照
+drizzle/             PostgreSQL migrations
+lib/db/              schema、连接、seed 和查询
+lib/ingestion/       provider adapter、补洞、重试、健康报告
+lib/market-data/     数据契约、标准化、聚合和双读比较
+lib/server/          server-only DAL、缓存和后端切换
+scripts/             DB、采集、健康与映射命令
+tests/               契约、路由、指标、数据库和采集测试
+.github/workflows/   quality、每小时采集、每日健康检查
 ```
 
----
+</details>
 
-## 📄 许可
+## 部署
 
-MIT — 随便用，交易盈亏自负。
+- **代码发布**：当前项目没有启用 Vercel Git 自动部署。应先通过质量门、保持工作树干净，
+  再从已确认的提交执行 `npx vercel deploy --prod --yes`。
+- **数据刷新**：`.github/workflows/ingest.yml` 每小时只写 PostgreSQL，不提交数据文件。
+- **数据巡检**：`.github/workflows/data-health.yml` 每日检查覆盖率、新鲜度和失败运行。
+
+Production：[crypto-sector-board.vercel.app](https://crypto-sector-board.vercel.app)
+
+## 路线图
+
+- [x] **P0** — 安全边界、依赖审计、质量门
+- [x] **P1** — 数据契约、指标语义、provider fixtures
+- [x] **P2** — PostgreSQL 与规范资产注册表
+- [x] **P3** — 幂等采集、自动补洞、数据健康
+- [x] **P4** — BFF、数据库页面读路径、DB/JSON 回滚
+- [ ] **P5** — 真实持仓盈亏、可解释信号、相关性和无前视回测
+- [ ] **P6** — 移动体验、无障碍、管理端和独立 Production 数据库
+
+完整进度见 [`PROJECT_STATUS.md`](./PROJECT_STATUS.md) 和
+[`docs/07-complete-repair-plan.md`](./docs/07-complete-repair-plan.md)。
+
+## 文档
+
+- [架构](./docs/02-architecture.md)
+- [数据口径](./docs/03-data-spec.md)
+- [运维与回滚](./docs/06-runbook.md)
+- [P2 数据库与注册表](./docs/09-p2-database-and-asset-registry.md)
+- [P3 可靠采集](./docs/10-p3-reliable-ingestion.md)
+- [P4 BFF 与页面切换](./docs/11-p4-bff-and-page-cutover.md)
+
+## 许可证
+
+当前仓库尚未包含独立 `LICENSE` 文件。仓库公开可读不等于已经授予复用许可；
+对外授权前需要补充明确的开源许可证。
