@@ -883,10 +883,10 @@ Vercel 目前通过 Marketplace 接入 Neon、Supabase 等 PostgreSQL 服务，�
 | P2 | Production 已完成 | Neon/PostgreSQL、Drizzle schema、migration、56 资产注册表、168 provider 状态、v2 板块配置、seed 和映射巡检已完成 |
 | P3 | Production 已完成 | 幂等采集、补洞、旧快照导入、data-health、只写数据库 workflow 和 31 天历史补齐已完成 |
 | P4 | Production 已完成 | DB BFF、页面切换、SWR、双读、JSON 回滚和批量历史已完成 |
-| P5.0/P5.1 | 本地实现与验收完成，待发布 | 关注资产语义、正确相关性、市场脉搏、可解释信号和首页搜索已通过 99 项测试及浏览器回归 |
+| P5.0/P5.1 | Production 已完成 | 关注资产语义、正确相关性、市场脉搏、可解释信号和首页搜索已通过 99 项测试、浏览器回归与线上验收 |
 | P5.2～P6 | 未开始 | 真实持仓、无前视回测、Telegram、移动专用列表和最终体验继续独立验收 |
 
-P0～P4 已发布到 GitHub `main` 和 Vercel Production。当前未发布内容仅为 P5.0/P5.1；本轮不创建新数据库、不启用付费数据源，也不修改现有 Preview/Production 共用 Neon Free 数据库的临时约定。
+P0～P5.1 已发布到 GitHub `main` 和 Vercel Production。本轮没有创建新数据库、启用付费数据源，也没有修改现有 Preview/Production 共用 Neon Free 数据库的临时约定。
 
 复核与修正记录（2026-07-30）：
 
@@ -1065,7 +1065,8 @@ P5.0 + P5.1 完成记录（2026-08-02）：
 - [x] 信号统一为 `market-pulse-v1`，包含原因、规则版本、`asOf`、样本数和质量状态；覆盖率、时效或样本不足时不触发。
 - [x] 首页新增市场脉搏、资产/板块搜索和两张主图联动高亮；精确资产搜索可直接打开详情。
 - [x] 16 个测试文件、99 个测试和完整 `npm run check` 通过；桌面与 390×844 浏览器控制台 0 error/0 warning，移动端无横向溢出。
-- [ ] 推送 GitHub `main` 并部署 Vercel Production 后完成线上验收。
+- [x] 功能提交 `b7f8f2d` 已推送 GitHub `main`；Quality workflow `30710517995` 与 Deploy Production workflow `30710554119` 均成功。
+- [x] Vercel deployment `cU6aN4eMXSs9GUvxoGwt4NiWEoP3` 为 Ready，正式入口 `https://crypto-sector-board.vercel.app` 已完成主页、核心 API、搜索、详情、相关性和移动端线上验收；data-health 为 `healthy`。
 
 详细口径、实施拆分和验收记录见 `docs/12-p5-market-pulse.md`。真实持仓、point-in-time 回测、Telegram workflow 和移动端专用列表不在本批范围内。
 

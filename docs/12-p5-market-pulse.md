@@ -139,5 +139,7 @@ components/
 - [x] P5.1 市场脉搏与搜索高亮 UI 完成。
 - [x] 单元测试和完整质量门完成：16 个测试文件、99 个测试通过。
 - [x] 桌面与 390×844 移动浏览器回归完成：0 error/0 warning，移动端无横向溢出。
-- [ ] GitHub 推送完成。
-- [ ] Vercel Production 部署与线上验收完成。
+- [x] GitHub 推送完成：功能提交 `b7f8f2d` 已进入 `main`，Quality workflow `30710517995` 成功。
+- [x] Vercel Production 部署与线上验收完成：Deploy Production workflow `30710554119` 成功，deployment `cU6aN4eMXSs9GUvxoGwt4NiWEoP3` 为 Ready，正式入口为 `https://crypto-sector-board.vercel.app`。
+- [x] 线上数据验收完成：board database coverage 100%，history/candles 正常，data-health 为 `healthy`，24h/7d 缺口均为 0，三个 provider 均成功。
+- [x] 线上交互验收完成：历史排名与 `market-pulse-v1` 正常加载，BTC 搜索得到 3 个匹配并可打开详情，相关性矩阵使用 30 个共同日收益样本；390×844 下页面宽度 390/390，控制台 0 error/0 warning。
