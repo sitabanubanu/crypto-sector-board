@@ -35,9 +35,10 @@
 {
   "version": 2,
   "registryVersion": 1,
-  "lastUpdated": "2026-07-30",
+  "lastUpdated": "2026-08-02",
   "effectiveFrom": "2026-05-15",
   "mainStreamThreshold": 300000000,
+  "focusAssets": ["bitcoin", "ethereum", "solana"],
   "sectors": [
     {
       "id": "btc",
@@ -59,6 +60,7 @@
 - `assetIds`：项目规范资产 ID，不是 ticker，也不再等同于任一 provider 的 ID
 - `registryVersion`：所依赖的资产注册表版本
 - `effectiveFrom`：当前成员关系最早已知生效时间，用于 point-in-time 查询
+- `focusAssets`：只表示需要在界面高亮的规范资产 ID；不包含数量、成本或账户信息，不能用于计算真实持仓市值与盈亏
 
 任何新增资产必须先进入 `data/assets.json` 并通过 `npm run registry:check`，再加入板块。
 
@@ -132,3 +134,31 @@ sector_metric = Σ (coin_metric_i × market_cap_i) / Σ market_cap_i
 2. 板块 `totalMarketCap` = 板块内各币 marketCap 之和
 3. 板块 `weightedReturnPct` 用 Excel 手算复核一次
 4. 检查所有 56 个币是否都被 `marketData` 返回（漏的 ID 写错了）
+
+## 9. P5 市场脉搏口径
+
+页面当前的 `24h` 仍是最新行情的滚动 24 小时收益；排名参考、z-score 和相关性则使用 `/api/v1/history` 的 UTC 日级收盘序列，两者必须在界面和代码中明确区分。
+
+```text
+breadth = count(valid return > 0) / count(valid return)
+median_return = median(valid returns)
+coin_contribution = coin_return × coin_market_cap / covered_market_cap
+top3_concentration = sum(abs(top3 contributions)) / sum(abs(all contributions))
+rank_change = previous_complete_utc_day_rank - current_rolling_24h_rank
+```
+
+- 广度和中位数使用板块内全部有有效收益的资产。
+- 贡献、板块历史日收益和排名只使用 `isMainstream=true` 且市值有效的资产。
+- 当前或历史日的有效市值覆盖低于 80% 时，不输出相应信号。
+- 历史资产收益只连接相邻 UTC 日期；缺日时不得跨缺口计算。
+- z-score 至少需要 20 个历史有效日收益；规则版本为 `market-pulse-v1`。
+
+## 10. 相关性与回测边界
+
+- 每个板块先生成带 UTC 日期的日收益序列，两板块再按日期 inner join。
+- Pearson 相关性至少需要 30 个共同样本；样本不足、零方差或无有效权重时返回 `null` / `N/A`，不能伪造成 0。
+- UI 必须同时保留共同样本数，并注明历史共同波动不代表因果关系。
+- 当前历史板块收益使用“当前成员 + 当前市值固定权重”，只适合观察、排名、异动和相关性，**不得用于回测**。
+- 真正回测必须使用 point-in-time 板块成员、市值、费用、滑点和缺口报告；该能力尚未实现。
+
+完整实现与验收口径见 [`12-p5-market-pulse.md`](./12-p5-market-pulse.md)。

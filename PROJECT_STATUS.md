@@ -2,13 +2,13 @@
 
 > **用途**：让任何人（或下次的 AI 会话）打开 30 秒内能续上项目。
 > **更新频率**：每个阶段切换或重大决策后更新本文件。
-> **更新时间**：2026-07-30
+> **更新时间**：2026-08-02
 >
-> **注意**：本文主体保留早期 MVP 阶段记录。当前修复路线以 `docs/07-complete-repair-plan.md` 为准：P0～P4 已完成实现和 Preview 验收，并按个人零成本方案发布到 Production；P5～P6 未开始。
+> **注意**：本文主体保留早期 MVP 阶段记录。当前修复路线以 `docs/07-complete-repair-plan.md` 为准：P0～P4 已发布到 Production；P5.0/P5.1 已完成本地实现与验收，正在进行 GitHub/Vercel 发布；真实持仓、回测和 P6 尚未开始。
 
 ---
 
-## 当前修复进度（2026-07-30）
+## 当前修复进度（2026-08-02）
 
 - P0：安全边界、依赖审计和质量门已完成并通过 `npm run check`。
 - P1：数据契约、provider fixtures、指标/快照校验、缓存和 watchlist 状态机已完成并通过测试。
@@ -24,10 +24,14 @@
 - P4 验收：14 个测试文件、89 个测试、生产依赖 0 漏洞和 production build 通过；桌面及 390×844 移动浏览器控制台 0 error/0 warning，30d、币种详情和自定义板块正常。
 - P4 Preview 部署：deployment `dpl_2dsVYRMtmtfSkMgf7oEBeHV83TBB` 为 Ready，URL 为 `https://crypto-sector-board-4ryd8fh3y-sitabanubanu-8645s-projects.vercel.app`。board/history/candles/data-health/主页均通过受保护云端复验。
 - P4 最终数据状态：board DB coverage 100%、dual-read common 56/56；history 1,674 点、覆盖约 96.43%；手动补齐最新小时后 data-health 为 `healthy`，24h/7d/quotes 均 100%。
+- P5.0 语义与正确性：`holdings` 已统一改为 `focusAssets` / “关注资产”；成交量/市值指标改称“成交活跃度”并移除资金流结论；相关性改为 UTC 日收益按日期 inner join，少于 30 个共同样本、零方差或无效权重均显示 `N/A`，同时保留共同样本数。
+- P5.1 市场脉搏：新增市场与板块上涨广度、中位数收益、Top 贡献者、贡献集中度、当前/上一完整 UTC 日排名、排名变化和 z-score；信号统一为 `market-pulse-v1`，输出原因、规则版本、时间、样本数和质量状态。
+- P5.1 页面：新增首页市场脉搏和资产/板块搜索；匹配结果联动高亮 Treemap 与柱状图，精确资产搜索按 Enter 可打开详情；Treemap 币种支持键盘操作，相关性与详情弹窗补齐 dialog 语义。
+- P5.0/P5.1 验收：16 个测试文件、99 个测试、lint、typecheck、资产注册表、migration、生产/完整依赖审计和 production build 全部通过；桌面与 390×844 浏览器回归无 error/warning，移动端页面宽度 390/390、无横向溢出。
 - Production 发布采用个人零成本临时方案：Vercel 保持 Hobby，Production 与 Preview 共用现有 Neon Free 数据库，不创建新的付费资源。该方案没有环境数据隔离，只适合当前个人、低流量、非商业使用；有外部用户或商业用途前必须拆分数据库。
 - GitHub repository secret `INGEST_DATABASE_URL` 已指向这套共享免费数据库；`ingest.yml` 在 `main` 中每小时只写数据库，不再提交快照或触发数据型部署。
 - 当前页面默认从数据库读取；旧 JSON 只作为只读回滚和双读比较基线，不再自动生成。
-- 未完成：Production 独立数据库、P5～P6、正式域名。当前共享数据库例外及恢复步骤见 `docs/06-runbook.md`。
+- 未完成：P5.0/P5.1 GitHub/Vercel 发布、真实持仓、无前视回测、Telegram workflow、移动端专用列表、Production 独立数据库和正式域名。当前共享数据库例外及恢复步骤见 `docs/06-runbook.md`。
 
 ---
 
@@ -206,9 +210,9 @@ crypto-sector-board/
 
 当前修复路线：
 
-1. 观察 Production 与每小时数据库采集；确认 Vercel/Neon 免费额度和数据健康保持稳定。
-2. 进入 P5：先修持仓语义，再统一信号/相关性，最后实现无前视回测与结果存储。
-3. 在出现外部用户或商业用途前拆分 Production 数据库；P5 验收通过后进入 P6 移动体验、无障碍和管理端。
+1. 把已验收的 P5.0/P5.1 推送到 GitHub `main`，部署 Vercel Production 并复验主页与四个核心 API。
+2. 下一批 P5 先设计真实持仓最小模型，再实现 point-in-time 数据与无前视回测；不要把关注资产继续当成持仓。
+3. Telegram workflow、移动端专用列表和管理端继续独立排期；出现外部用户或商业用途前拆分 Production 数据库。
 
 以下为早期 MVP 路线记录，不再作为当前执行入口：
 

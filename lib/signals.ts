@@ -1,61 +1,84 @@
-import type { SectorSnapshot } from "./types";
+import type { SectorPulse } from "./market-pulse";
 
-export type SignalType = "strong_up" | "strong_down" | "pullback" | "bull_trap";
+export const SIGNAL_RULE_VERSION = "market-pulse-v1";
+export const ROTATION_RANK_THRESHOLD = 3;
+export const ANOMALY_Z_THRESHOLD = 2;
+
+export type SignalType =
+  | "rotation_up"
+  | "rotation_down"
+  | "anomaly_up"
+  | "anomaly_down";
 
 export interface SectorSignal {
   sectorId: string;
   type: SignalType;
   label: string;
   icon: string;
+  reason: string;
+  ruleVersion: typeof SIGNAL_RULE_VERSION;
+  asOf: string;
+  sampleSize: number;
+  quality: "ok";
 }
 
-const SIGNAL_DEFS: Record<SignalType, { label: string; icon: string }> = {
-  strong_up: { label: "强势确认", icon: "🔥" },
-  strong_down: { label: "弱势回避", icon: "❄️" },
-  pullback: { label: "回调机会", icon: "💰" },
-  bull_trap: { label: "诱多陷阱", icon: "⚠️" },
-};
+function formatRankChange(value: number): string {
+  return `${Math.abs(value)} 位`;
+}
 
-export function detectSectorSignal(sector: SectorSnapshot): SectorSignal | null {
-  const r24h = sector.weightedReturnPct;
-  const r3d = sector.weightedReturnPct3d;
-  const r7d = sector.weightedReturnPct7d;
-  const r30d = sector.weightedReturnPct30d;
+export function detectSectorSignal(
+  pulse: SectorPulse,
+): SectorSignal | null {
+  if (pulse.quality !== "ok") return null;
 
-  if (r24h == null || r3d == null || r7d == null || r30d == null) return null;
-
-  const pos24h = r24h > 0;
-  const pos3d = r3d > 0;
-  const pos7d = r7d > 0;
-  const pos30d = r30d > 0;
-
-  // All 4 positive
-  if (pos24h && pos3d && pos7d && pos30d) {
-    return { sectorId: sector.id, type: "strong_up", ...SIGNAL_DEFS.strong_up };
+  if (
+    pulse.anomalyZScore != null &&
+    Math.abs(pulse.anomalyZScore) >= ANOMALY_Z_THRESHOLD
+  ) {
+    const upward = pulse.anomalyZScore > 0;
+    return {
+      sectorId: pulse.sectorId,
+      type: upward ? "anomaly_up" : "anomaly_down",
+      label: upward ? "向上异动" : "向下异动",
+      icon: upward ? "▲" : "▼",
+      reason: `${pulse.sectorName} 当前 24h 收益相对 ${pulse.historySampleSize} 个完整 UTC 日达到 z=${pulse.anomalyZScore.toFixed(2)}`,
+      ruleVersion: SIGNAL_RULE_VERSION,
+      asOf: pulse.asOf,
+      sampleSize: pulse.historySampleSize,
+      quality: "ok",
+    };
   }
-  // All 4 negative
-  if (!pos24h && !pos3d && !pos7d && !pos30d) {
-    return { sectorId: sector.id, type: "strong_down", ...SIGNAL_DEFS.strong_down };
-  }
-  // 24h negative but 3d & 7d positive → short-term dip in uptrend
-  if (!pos24h && pos3d && pos7d) {
-    return { sectorId: sector.id, type: "pullback", ...SIGNAL_DEFS.pullback };
-  }
-  // 24h positive but 3d & 7d negative → short-term pop in downtrend
-  if (pos24h && !pos3d && !pos7d) {
-    return { sectorId: sector.id, type: "bull_trap", ...SIGNAL_DEFS.bull_trap };
+
+  if (
+    pulse.rankChange != null &&
+    Math.abs(pulse.rankChange) >= ROTATION_RANK_THRESHOLD &&
+    pulse.currentRank != null &&
+    pulse.previousRank != null
+  ) {
+    const upward = pulse.rankChange > 0;
+    return {
+      sectorId: pulse.sectorId,
+      type: upward ? "rotation_up" : "rotation_down",
+      label: upward ? "排名上升" : "排名下降",
+      icon: upward ? "↑" : "↓",
+      reason: `${pulse.sectorName} 从 #${pulse.previousRank} 变为 #${pulse.currentRank}，${upward ? "上升" : "下降"}${formatRankChange(pulse.rankChange)}`,
+      ruleVersion: SIGNAL_RULE_VERSION,
+      asOf: pulse.asOf,
+      sampleSize: pulse.historySampleSize,
+      quality: "ok",
+    };
   }
 
   return null;
 }
 
-export function detectAllSignals(sectors: SectorSnapshot[]): Map<string, SectorSignal> {
-  const map = new Map<string, SectorSignal>();
-  for (const sector of sectors) {
-    const signal = detectSectorSignal(sector);
-    if (signal) {
-      map.set(sector.id, signal);
-    }
+export function detectAllSignals(
+  pulses: ReadonlyArray<SectorPulse>,
+): Map<string, SectorSignal> {
+  const signals = new Map<string, SectorSignal>();
+  for (const pulse of pulses) {
+    const signal = detectSectorSignal(pulse);
+    if (signal) signals.set(pulse.sectorId, signal);
   }
-  return map;
+  return signals;
 }

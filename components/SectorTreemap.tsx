@@ -15,7 +15,10 @@ interface Props {
   viewMode: ViewMode;
   period: PeriodType;
   signals?: Map<string, SectorSignal>;
-  holdings?: string[];
+  focusAssets?: string[];
+  highlightedAssetIds?: ReadonlySet<string>;
+  highlightedSectorIds?: ReadonlySet<string>;
+  hasSearchHighlight?: boolean;
   onCoinClick?: (coin: CoinSnapshot, sectorName: string) => void;
 }
 
@@ -26,10 +29,25 @@ interface HoverInfo {
   y: number;
 }
 
-export default function SectorTreemap({ snapshot, width, height, viewMode, period, signals, holdings, onCoinClick }: Props) {
+export default function SectorTreemap({
+  snapshot,
+  width,
+  height,
+  viewMode,
+  period,
+  signals,
+  focusAssets,
+  highlightedAssetIds,
+  highlightedSectorIds,
+  hasSearchHighlight = false,
+  onCoinClick,
+}: Props) {
   const [hover, setHover] = useState<HoverInfo | null>(null);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const holdingsSet = useMemo(() => new Set(holdings ?? []), [holdings]);
+  const focusAssetsSet = useMemo(
+    () => new Set(focusAssets ?? []),
+    [focusAssets],
+  );
 
   const showHover = (info: HoverInfo) => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
@@ -97,21 +115,30 @@ export default function SectorTreemap({ snapshot, width, height, viewMode, perio
           const sw = sectorNode.x1 - sectorNode.x0;
           const sh = sectorNode.y1 - sectorNode.y0;
           if (sw <= 0 || sh <= 0) return null;
+          const sectorDirectlyHighlighted =
+            highlightedSectorIds?.has(sector.id) ?? false;
+          const containsHighlightedAsset = sector.coins.some((coin) =>
+            highlightedAssetIds?.has(coin.id),
+          );
+          const sectorHighlighted =
+            sectorDirectlyHighlighted || containsHighlightedAsset;
+          const sectorOpacity =
+            hasSearchHighlight && !sectorHighlighted ? 0.18 : 1;
 
           if (viewMode === "overview") {
             const titleSize = Math.max(12, Math.min(24, Math.sqrt(sw * sh) / 8));
             const pctSize = Math.max(11, Math.min(20, Math.sqrt(sw * sh) / 10));
             const sig = signals?.get(sector.id);
             return (
-              <g key={sector.id}>
+              <g key={sector.id} opacity={sectorOpacity}>
                 <rect
                   x={sectorNode.x0}
                   y={sectorNode.y0}
                   width={sw}
                   height={sh}
                   fill={sectorColor}
-                  stroke="#ffffff"
-                  strokeWidth={1}
+                  stroke={sectorHighlighted ? "#2563eb" : "#ffffff"}
+                  strokeWidth={sectorHighlighted ? 3 : 1}
                 />
                 <text
                   x={sectorNode.x0 + sw / 2}
@@ -143,15 +170,15 @@ export default function SectorTreemap({ snapshot, width, height, viewMode, perio
           const sig = signals?.get(sector.id);
 
           return (
-            <g key={sector.id}>
+            <g key={sector.id} opacity={sectorOpacity}>
               <rect
                 x={sectorNode.x0}
                 y={sectorNode.y0}
                 width={sw}
                 height={sh}
                 fill="#ffffff"
-                stroke="#cbd5e1"
-                strokeWidth={1.5}
+                stroke={sectorHighlighted ? "#2563eb" : "#cbd5e1"}
+                strokeWidth={sectorHighlighted ? 3 : 1.5}
                 rx={4}
                 ry={4}
               />
@@ -207,10 +234,19 @@ export default function SectorTreemap({ snapshot, width, height, viewMode, perio
                   ? coin.volume24h / coin.marketCap
                   : 0;
                 const borderW = 0.5 + Math.min(turnover * 600, 2.5);
+                const coinHighlighted =
+                  sectorDirectlyHighlighted ||
+                  (highlightedAssetIds?.has(coin.id) ?? false);
+                const coinOpacity =
+                  hasSearchHighlight && !coinHighlighted ? 0.24 : 1;
 
                 return (
                   <g
                     key={coin.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`${coin.name}（${coin.symbol}），${sector.name}，${PERIOD_LABEL[period]} ${formatPct(getCoinReturn(coin, period))}${focusAssetsSet.has(coin.id) ? "，关注资产" : ""}`}
+                    opacity={coinOpacity}
                     onMouseEnter={(e) =>
                       showHover({
                         coin,
@@ -229,16 +265,23 @@ export default function SectorTreemap({ snapshot, width, height, viewMode, perio
                     }
                     onMouseLeave={() => hideHover()}
                     onClick={() => onCoinClick?.(coin, sector.name)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onCoinClick?.(coin, sector.name);
+                      }
+                    }}
                     style={{ cursor: "pointer" }}
                   >
+                    <title>{`${coin.name}（${coin.symbol}）· ${sector.name}`}</title>
                     <rect
                       x={coinNode.x0}
                       y={coinNode.y0}
                       width={cw}
                       height={ch}
                       fill={coinColor}
-                      stroke="#ffffff"
-                      strokeWidth={borderW}
+                      stroke={coinHighlighted ? "#2563eb" : "#ffffff"}
+                      strokeWidth={coinHighlighted ? Math.max(3, borderW) : borderW}
                       clipPath={`url(#clip-${sector.id})`}
                       style={{ transition: "opacity 0.12s" }}
                       onMouseEnter={(e) => {
@@ -250,8 +293,8 @@ export default function SectorTreemap({ snapshot, width, height, viewMode, perio
                         el.setAttribute("opacity", "1");
                       }}
                     />
-                    {/* Gold star for held coins */}
-                    {holdingsSet.has(coin.id) && cw > 16 && ch > 16 && (
+                    {/* Gold star marks a focus asset, not a real position. */}
+                    {focusAssetsSet.has(coin.id) && cw > 16 && ch > 16 && (
                       <text
                         x={coinNode.x0 + cw - 4}
                         y={coinNode.y0 + (cw < 32 ? 10 : 12)}
@@ -300,14 +343,28 @@ export default function SectorTreemap({ snapshot, width, height, viewMode, perio
         })}
       </svg>
 
-      {hover && <Tooltip info={hover} period={period} />}
+      {hover && (
+        <Tooltip
+          info={hover}
+          period={period}
+          isFocused={focusAssetsSet.has(hover.coin.id)}
+        />
+      )}
     </div>
   );
 }
 
 const PERIOD_LABEL: Record<PeriodType, string> = { "24h": "24h 涨跌", "3d": "3d 涨跌", "7d": "7d 涨跌", "30d": "30d 涨跌" };
 
-function Tooltip({ info, period }: { info: HoverInfo; period: PeriodType }) {
+function Tooltip({
+  info,
+  period,
+  isFocused,
+}: {
+  info: HoverInfo;
+  period: PeriodType;
+  isFocused: boolean;
+}) {
   const { coin, sectorName, x, y } = info;
   const offset = 12;
   const tooltipWidth = 240;
@@ -353,6 +410,9 @@ function Tooltip({ info, period }: { info: HoverInfo; period: PeriodType }) {
       <Row label="最高" value={formatPrice(coin.high)} />
       <Row label="最低" value={formatPrice(coin.low)} />
       <Row label="当前" value={formatPrice(coin.close)} />
+      {isFocused && (
+        <Row label="关注状态" value="★ 已关注（非真实持仓）" />
+      )}
       <Row
         label={PERIOD_LABEL[period]}
         value={formatPct(getCoinReturn(coin, period))}

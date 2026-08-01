@@ -1,10 +1,10 @@
 {
   "version": 2,
   "registryVersion": 1,
-  "lastUpdated": "2026-07-30",
+  "lastUpdated": "2026-08-02",
   "effectiveFrom": "2026-05-15",
   "mainStreamThreshold": 300000000,
-  "holdings": ["bitcoin", "ethereum", "solana"],
+  "focusAssets": ["bitcoin", "ethereum", "solana"],
   "sectors": [
     {
       "id": "btc",

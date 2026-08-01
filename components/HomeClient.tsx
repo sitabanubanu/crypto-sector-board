@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Header from "@/components/Header";
+import MarketPulseBar from "@/components/MarketPulseBar";
 import SectorTreemap from "@/components/SectorTreemap";
 import TrendBarChart from "@/components/TrendBarChart";
 import WatchlistEditor from "@/components/WatchlistEditor";
@@ -27,7 +28,8 @@ import {
 import { buildCustomSectorSnapshots } from "@/lib/market-data/custom-sectors";
 import { detectAllSignals } from "@/lib/signals";
 import { buildCorrelationMatrix } from "@/lib/correlation";
-import type { PeriodType, WatchlistConfig, SectorConfig, CustomSectorConfig, CoinSnapshot } from "@/lib/types";
+import { buildMarketPulse, searchMarket, type MarketSearchResult } from "@/lib/market-pulse";
+import type { PeriodType, WatchlistConfig, CustomSectorConfig, CoinSnapshot } from "@/lib/types";
 import type { BoardResponse } from "@/lib/market-data/bff-contracts";
 
 interface Props {
@@ -49,10 +51,11 @@ export default function HomeClient({ initialBoard }: Props) {
   const {
     board,
     closesByAssetId,
+    historyByAssetId,
     status: boardStatus,
   } = useBoardData(initialBoard);
   const snapshot = board.data.snapshot;
-  const holdings = board.data.holdings;
+  const focusAssets = board.data.focusAssets;
   const isMobile = useIsMobile();
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -61,6 +64,7 @@ export default function HomeClient({ initialBoard }: Props) {
   const [mainView, setMainView] = useState<"split" | "chart" | "treemap">("split");
   const [selectedCoin, setSelectedCoin] = useState<{ coin: CoinSnapshot; sectorName: string } | null>(null);
   const [watchlistOpen, setWatchlistOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const builtInSectorIdsKey = snapshot.sectors
     .map((sector) => sector.id)
     .join(",");
@@ -133,12 +137,6 @@ export default function HomeClient({ initialBoard }: Props) {
     };
   }, []);
 
-  // Canonical sector config used by the historical correlation view.
-  const sectorConfig = useMemo<SectorConfig[]>(
-    () => snapshot.sectors.map((s) => ({ id: s.id, name: s.name, coins: s.coins.map((c) => c.id) })),
-    [snapshot],
-  );
-
   // Watchlist callbacks
   const handleWatchlistToggle = useCallback((sectorId: string) => {
     setWatchlistConfig((prev) => toggleSector(prev, sectorId));
@@ -188,14 +186,57 @@ export default function HomeClient({ initialBoard }: Props) {
     };
   }, [snapshot, watchlistConfig]);
 
-  // Sector rotation signals
-  const signals = useMemo(() => detectAllSignals(activeSnapshot.sectors), [activeSnapshot.sectors]);
+  const marketPulse = useMemo(
+    () => buildMarketPulse(activeSnapshot, historyByAssetId),
+    [activeSnapshot, historyByAssetId],
+  );
+
+  // Versioned, explainable signals derived from rank changes and anomalies.
+  const signals = useMemo(
+    () => detectAllSignals(marketPulse.sectors),
+    [marketPulse.sectors],
+  );
 
   // Correlation matrix uses one compact, batched database history response.
   const correlationMatrix = useMemo(() => {
-    if (closesByAssetId.size === 0) return null;
-    return buildCorrelationMatrix(sectorConfig, closesByAssetId);
-  }, [closesByAssetId, sectorConfig]);
+    if (historyByAssetId.size === 0) return null;
+    return buildCorrelationMatrix(activeSnapshot.sectors, historyByAssetId);
+  }, [activeSnapshot.sectors, historyByAssetId]);
+
+  const searchResults = useMemo(
+    () => searchMarket(activeSnapshot, searchQuery),
+    [activeSnapshot, searchQuery],
+  );
+  const hasSearchHighlight =
+    searchQuery.trim().length > 0 && searchResults.length > 0;
+  const highlightedAssetIds = useMemo(
+    () =>
+      new Set(
+        searchResults.flatMap((result) =>
+          result.kind === "asset" ? [result.id] : [],
+        ),
+      ),
+    [searchResults],
+  );
+  const highlightedSectorIds = useMemo(
+    () => new Set(searchResults.flatMap((result) => result.sectorIds)),
+    [searchResults],
+  );
+
+  const handleSearchSelect = useCallback(
+    (result: MarketSearchResult) => {
+      setSearchQuery(result.label);
+      if (result.kind !== "asset") return;
+      for (const sector of activeSnapshot.sectors) {
+        const coin = sector.coins.find((candidate) => candidate.id === result.id);
+        if (coin) {
+          setSelectedCoin({ coin, sectorName: sector.name });
+          return;
+        }
+      }
+    },
+    [activeSnapshot.sectors],
+  );
 
   // Coin → sector lookup for detail modal
   const coinSector = useMemo(() => {
@@ -259,6 +300,15 @@ export default function HomeClient({ initialBoard }: Props) {
         activePreset={activePreset}
         onPresetChange={handlePresetChange}
       />
+      <MarketPulseBar
+        pulse={marketPulse}
+        signals={signals}
+        query={searchQuery}
+        searchResults={searchResults}
+        isMobile={isMobile}
+        onQueryChange={setSearchQuery}
+        onSelectResult={handleSearchSelect}
+      />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, position: "relative" }}>
         <div
           ref={containerRef}
@@ -277,7 +327,10 @@ export default function HomeClient({ initialBoard }: Props) {
               viewMode={viewMode}
               period={period}
               signals={signals}
-              holdings={holdings}
+              focusAssets={focusAssets}
+              highlightedAssetIds={highlightedAssetIds}
+              highlightedSectorIds={highlightedSectorIds}
+              hasSearchHighlight={hasSearchHighlight}
               onCoinClick={(coin, sectorName) => setSelectedCoin({ coin, sectorName })}
             />
           )}
@@ -289,7 +342,13 @@ export default function HomeClient({ initialBoard }: Props) {
             overflow: mainView === "treemap" ? "hidden" : "auto",
           }}
         >
-          <TrendBarChart sectors={activeSnapshot.sectors} signals={signals} isMobile={isMobile} />
+          <TrendBarChart
+            sectors={activeSnapshot.sectors}
+            signals={signals}
+            isMobile={isMobile}
+            highlightedSectorIds={highlightedSectorIds}
+            hasSearchHighlight={hasSearchHighlight}
+          />
         </div>
 
         {/* View toggle — bottom-left corner */}

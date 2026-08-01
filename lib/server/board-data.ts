@@ -23,7 +23,7 @@ const BOARD_STALE_AFTER_SECONDS = 2 * 60 * 60;
 interface BoardPayload {
   snapshot: DailySnapshot;
   assets: PublicAsset[];
-  holdings: string[];
+  focusAssets: string[];
 }
 
 function publicAssets(): PublicAsset[] {
@@ -86,13 +86,13 @@ async function loadDatabaseBoardPayload(): Promise<BoardPayload> {
         name: asset.name,
       }))
       .sort((left, right) => left.symbol.localeCompare(right.symbol)),
-    holdings: [...(sectorCatalog.holdings ?? [])],
+    focusAssets: [...(sectorCatalog.focusAssets ?? [])],
   };
 }
 
 const getCachedDatabaseBoardPayload = unstable_cache(
   loadDatabaseBoardPayload,
-  ["p4-database-board-v1"],
+  ["p5-database-board-v2"],
   {
     revalidate: 30,
     tags: ["market-board"],
@@ -107,7 +107,7 @@ function loadJsonBoardPayload(): BoardPayload {
   return {
     snapshot,
     assets: publicAssets(),
-    holdings: [...(sectorCatalog.holdings ?? [])],
+    focusAssets: [...(sectorCatalog.focusAssets ?? [])],
   };
 }
 

@@ -2,29 +2,27 @@
 
 import { useState } from "react";
 import type { CoinSnapshot, SectorSnapshot } from "@/lib/types";
-import { formatPct, formatMarketCap } from "@/lib/colors";
+import { formatPct } from "@/lib/colors";
 
 interface Props {
-  holdings: string[];
+  focusAssets: string[];
   sectors: SectorSnapshot[];
 }
 
-export default function PortfolioSummary({ holdings, sectors }: Props) {
+/** Legacy hidden component retained only as a focus-list view. It is not a portfolio. */
+export default function PortfolioSummary({ focusAssets, sectors }: Props) {
   const [collapsed, setCollapsed] = useState(true);
 
-  // Find held coins across all sectors
-  const heldCoins: { coin: CoinSnapshot; sectorName: string }[] = [];
+  const focusedCoins: { coin: CoinSnapshot; sectorName: string }[] = [];
   for (const s of sectors) {
     for (const c of s.coins) {
-      if (holdings.includes(c.id)) {
-        heldCoins.push({ coin: c, sectorName: s.name });
+      if (focusAssets.includes(c.id)) {
+        focusedCoins.push({ coin: c, sectorName: s.name });
       }
     }
   }
-  const hasHoldings = heldCoins.length > 0;
-
-  const totalValue = heldCoins.reduce((sum, h) => sum + (h.coin.marketCap ?? 0), 0);
-  const weightedCoins = heldCoins.filter(
+  const hasFocusAssets = focusedCoins.length > 0;
+  const weightedCoins = focusedCoins.filter(
     (holding) =>
       holding.coin.marketCap != null &&
       holding.coin.marketCap > 0 &&
@@ -77,7 +75,7 @@ export default function PortfolioSummary({ holdings, sectors }: Props) {
           fontSize: 13,
         }}
       >
-        <span>★ {hasHoldings ? "持仓概览" : "添加持仓"}</span>
+        <span>★ {hasFocusAssets ? "关注资产" : "添加关注"}</span>
         <span style={{ fontSize: 10, opacity: 0.8 }}>
           {collapsed ? "展开" : "收起"}
         </span>
@@ -85,26 +83,13 @@ export default function PortfolioSummary({ holdings, sectors }: Props) {
 
       {!collapsed && (
         <div style={{ padding: "8px 0", maxHeight: 360, overflow: "auto" }}>
-          {!hasHoldings ? (
+          {!hasFocusAssets ? (
             <div style={{ padding: "12px", fontSize: 11, color: "#9ca3af", lineHeight: 1.6 }}>
               在 <code style={{ background: "#f5f6f8", padding: "1px 4px", borderRadius: 3 }}>data/sectors.json</code> 的
-              <code style={{ background: "#f5f6f8", padding: "1px 4px", borderRadius: 3 }}>holdings</code> 数组中填入币种 ID（如 bitcoin、ethereum），开启持仓标记。
+              <code style={{ background: "#f5f6f8", padding: "1px 4px", borderRadius: 3 }}>focusAssets</code> 数组中填入币种 ID（如 bitcoin、ethereum），开启关注标记。它不表示真实持仓。
             </div>
           ) : (
             <>
-              {/* Summary row */}
-              <div
-                style={{
-                  padding: "6px 12px",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  borderBottom: "1px solid #f0f1f3",
-                  fontWeight: 600,
-                }}
-              >
-                <span style={{ color: "#6b7280" }}>总市值</span>
-                <span style={{ color: "#1f2328" }}>{formatMarketCap(totalValue)}</span>
-              </div>
               <div
                 style={{
                   padding: "6px 12px",
@@ -114,7 +99,7 @@ export default function PortfolioSummary({ holdings, sectors }: Props) {
                   fontWeight: 600,
                 }}
               >
-                <span style={{ color: "#6b7280" }}>24h 加权涨跌</span>
+                <span style={{ color: "#6b7280" }}>关注列表 24h 市值加权</span>
                 <span
                   style={{
                     color:
@@ -130,7 +115,7 @@ export default function PortfolioSummary({ holdings, sectors }: Props) {
               </div>
 
               {/* Individual coins */}
-              {heldCoins
+              {focusedCoins
                 .sort(
                   (a, b) =>
                     (b.coin.returnPct ?? Number.NEGATIVE_INFINITY) -

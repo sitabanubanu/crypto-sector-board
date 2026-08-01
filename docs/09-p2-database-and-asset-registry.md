@@ -79,8 +79,9 @@ Vercel 已停止提供旧的原生 Vercel Postgres，新项目应从 Marketplace
 {
   "version": 2,
   "registryVersion": 1,
-  "lastUpdated": "2026-07-30",
+  "lastUpdated": "2026-08-02",
   "effectiveFrom": "2026-05-15",
+  "focusAssets": ["bitcoin", "ethereum", "solana"],
   "sectors": [
     {
       "id": "btc",
@@ -91,7 +92,7 @@ Vercel 已停止提供旧的原生 Vercel Postgres，新项目应从 Marketplace
 }
 ```
 
-`lastUpdated` 表示配置文件修改时间，`effectiveFrom` 表示当前成员关系最早已知生效时间，两者不能混用。运行时如果需要旧的 `{ coins: string[] }` 形状，只能通过 `getRuntimeSectorConfigs()` 适配。
+`lastUpdated` 表示配置文件修改时间，`effectiveFrom` 表示当前成员关系最早已知生效时间，两者不能混用。`focusAssets` 只用于界面关注标记，不代表真实持仓。运行时如果需要旧的 `{ coins: string[] }` 形状，只能通过 `getRuntimeSectorConfigs()` 适配。
 
 ## 6. 命令
 

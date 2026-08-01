@@ -1,4 +1,6 @@
-// Reads latest snapshot and sends hourly summary via Telegram Bot API.
+// Legacy manual sender. P5.1 deliberately omits signals because the correct
+// rank/anomaly rules require timestamped history. P5.4 will connect this script
+// to the shared market-pulse domain module before enabling a workflow.
 // Requires env: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 // Usage: npx tsx scripts/send-telegram.ts
 
@@ -42,24 +44,6 @@ const sorted = [...snapshot.sectors].sort(
 const top5 = sorted.slice(0, 5);
 const bottom3 = sorted.slice(-3).reverse();
 
-// Detect signals
-function detectSignal(s: typeof sorted[0]): string | null {
-  const r24 = s.weightedReturnPct;
-  const r3 = s.weightedReturnPct3d;
-  const r7 = s.weightedReturnPct7d;
-  const r30 = s.weightedReturnPct30d;
-  if (r24 == null) return null;
-  const allUp = r24 > 0 && (r3 == null || r3 > 0) && (r7 == null || r7 > 0) && (r30 == null || r30 > 0);
-  const allDown = r24 < 0 && (r3 == null || r3 < 0) && (r7 == null || r7 < 0) && (r30 == null || r30 < 0);
-  if (allUp) return "🔥 强势";
-  if (allDown) return "❄️ 弱势";
-  if (r24 < 0 && r3 != null && r3 > 0 && r7 != null && r7 > 0) return "💰 回调机会";
-  if (r24 > 0 && r3 != null && r3 < 0 && r7 != null && r7 < 0) return "⚠️ 诱多陷阱";
-  return null;
-}
-
-const signaled = sorted.filter((s) => detectSignal(s) != null);
-
 // Build message
 const dateStr = snapshot.date;
 const genTime = new Date(snapshot.generatedAt).toLocaleString("zh-CN", { timeZone: "UTC" }) + " UTC";
@@ -77,15 +61,6 @@ for (const s of top5) {
 msg += `\n🔴 跌幅 Bottom 3：\n`;
 for (const s of bottom3) {
   msg += `  ${formatPct(s.weightedReturnPct)}  ${s.name}\n`;
-}
-
-// Active signals
-if (signaled.length > 0) {
-  msg += `\n⚡ 活跃信号：\n`;
-  for (const s of signaled) {
-    const signal = detectSignal(s);
-    msg += `  ${signal}  ${s.name}\n`;
-  }
 }
 
 // Special: BTC spotlight

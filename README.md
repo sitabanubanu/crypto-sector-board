@@ -18,7 +18,7 @@
 </p>
 
 这是一个面向个人观察的加密市场结构看板。它把 **56 个资产**归入
-**14 个板块**，用 Treemap 和同口径历史数据比较
+**14 个板块**，用 Treemap、市场广度、排名变化和同口径历史数据比较
 **24h / 3d / 7d / 30d** 强弱。面积代表市值权重，颜色代表涨跌：
 **红涨、绿跌**。
 
@@ -33,9 +33,12 @@
 ## 一眼看到什么
 
 - **市场结构**：Treemap 同时展示板块和币种，避免在零散涨跌榜里来回切换。
+- **市场脉搏**：汇总全市场上涨广度、板块排名变化、主要贡献者和数据质量。
+- **可解释信号**：轮动与异动信号包含规则版本、触发原因、样本数和数据时间。
 - **周期分歧**：24h、3d、7d、30d 并排，缺失历史明确显示为 `N/A`。
+- **快速定位**：首页可按资产 ID、代码、名称或板块搜索，并联动高亮两张主图。
 - **数据可信度**：页面显示 backend、source、freshness、coverage 和 fallback。
-- **继续下钻**：点击币种查看价格、市值、成交量和历史；自选板块保存在本地浏览器。
+- **继续下钻**：点击币种查看价格、市值、成交活跃度和历史；自选板块保存在本地浏览器。
 
 当前主路径已经从“浏览器逐币请求 + Git 快照”切换为
 “PostgreSQL + server-only DAL + 版本化 BFF”。浏览器不会直接访问交易所，
@@ -43,24 +46,26 @@
 
 ## 当前状态与边界
 
-已完成的 P0～P4：
+已完成的 P0～P4，以及 P5.0 / P5.1：
 
 - 安全边界、依赖审计和自动质量门。
 - 56 资产 / 168 provider 状态的规范注册表。
 - PostgreSQL migration、seed、幂等采集、重试和自动补洞。
 - `/api/v1/board`、`candles`、批量 `history` 和 `data-health`。
 - DB/JSON 双读比较，以及 `DATA_BACKEND=json` 只读回滚路径。
+- 关注资产语义、按 UTC 日期对齐的相关性、样本质量门和 `N/A` 降级。
+- 市场广度、中位数、贡献者、排名变化、可解释信号与首页搜索高亮。
 - Production 与每小时数据库采集已经上线。
 
 > [!WARNING]
-> 这是数据可视化与工程实验项目，不构成投资建议。持仓语义、轮动信号、
-> 相关性和回测仍是实验功能，计划在 P5 校正后再作为决策能力介绍。
+> 这是数据可视化与工程实验项目，不构成投资建议。金色星标仅表示“关注资产”，
+> 不代表真实持仓。信号和相关性仍是观察指标，不表示因果关系；回测尚未实现。
 
 当前已知边界：
 
 - Preview 与 Production 暂时共用同一套 Neon Free 数据库，只适合当前个人、低流量使用。
 - MKR、XMR 没有可用的 Gate/OKX 现货历史，相应历史必须保持缺失，不能用其他资产代替。
-- 移动端具备基础布局，但窄屏柱状图仍有 SVG 负宽度错误，完整移动体验留在 P6 修复。
+- 移动端基础布局和窄屏柱状图已可用，但专用列表视图与更完整的触控体验仍留在 P6。
 - Telegram 推送脚本仍在仓库中，但没有接入当前每小时采集 workflow。
 
 ## 数据路径
@@ -157,8 +162,9 @@ tests/               契约、路由、指标、数据库和采集测试
 
 ## 部署
 
-- **代码发布**：当前项目没有启用 Vercel Git 自动部署。应先通过质量门、保持工作树干净，
-  再从已确认的提交执行 `npx vercel deploy --prod --yes`。
+- **代码发布**：当前项目没有启用 Vercel Git 自动部署。先通过质量门并推送已确认的提交，
+  再手动运行 GitHub Actions 的 `Deploy Production`；本地有 Vercel 登录态时也可执行
+  `npx vercel deploy --prod --yes`。
 - **数据刷新**：`.github/workflows/ingest.yml` 每小时只写 PostgreSQL，不提交数据文件。
 - **数据巡检**：`.github/workflows/data-health.yml` 每日检查覆盖率、新鲜度和失败运行。
 
@@ -171,7 +177,7 @@ Production：[crypto-sector-board.vercel.app](https://crypto-sector-board.vercel
 - [x] **P2** — PostgreSQL 与规范资产注册表
 - [x] **P3** — 幂等采集、自动补洞、数据健康
 - [x] **P4** — BFF、数据库页面读路径、DB/JSON 回滚
-- [ ] **P5** — 真实持仓盈亏、可解释信号、相关性和无前视回测
+- [ ] **P5** — P5.0/P5.1 已完成；真实持仓盈亏和无前视回测待后续阶段
 - [ ] **P6** — 移动体验、无障碍、管理端和独立 Production 数据库
 
 完整进度见 [`PROJECT_STATUS.md`](./PROJECT_STATUS.md) 和
@@ -185,6 +191,7 @@ Production：[crypto-sector-board.vercel.app](https://crypto-sector-board.vercel
 - [P2 数据库与注册表](./docs/09-p2-database-and-asset-registry.md)
 - [P3 可靠采集](./docs/10-p3-reliable-ingestion.md)
 - [P4 BFF 与页面切换](./docs/11-p4-bff-and-page-cutover.md)
+- [P5.0/P5.1 市场脉搏实施计划](./docs/12-p5-market-pulse.md)
 
 ## 许可证
 

@@ -8,6 +8,7 @@ import {
   type BoardResponse,
   type HistoryResponse,
 } from "@/lib/market-data/bff-contracts";
+import type { AssetHistoryMap } from "@/lib/sector-history";
 
 export type BoardRefreshStatus =
   | "ready"
@@ -67,6 +68,16 @@ export function useBoardData(initialBoard: BoardResponse) {
       revalidateOnFocus: false,
     },
   );
+  const historyByAssetId = useMemo<AssetHistoryMap>(() => {
+    const result = new Map<
+      string,
+      Array<{ time: string; close: number | null }>
+    >();
+    for (const asset of historyRequest.data?.data.assets ?? []) {
+      result.set(asset.assetId, asset.points);
+    }
+    return result;
+  }, [historyRequest.data]);
   const closesByAssetId = useMemo(() => {
     const result = new Map<string, number[]>();
     for (const asset of historyRequest.data?.data.assets ?? []) {
@@ -88,6 +99,7 @@ export function useBoardData(initialBoard: BoardResponse) {
   return {
     board,
     closesByAssetId,
+    historyByAssetId,
     historyQuality: historyRequest.data?.meta,
     status,
   };

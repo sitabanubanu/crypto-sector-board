@@ -62,7 +62,7 @@ export interface SectorsFile {
   version: number;
   lastUpdated: string;
   mainStreamThreshold: number;
-  holdings?: string[];
+  focusAssets?: string[];
   sectors: SectorConfig[];
 }
 
@@ -78,7 +78,7 @@ export interface CanonicalSectorsFile {
   lastUpdated: string;
   effectiveFrom: string;
   mainStreamThreshold: number;
-  holdings?: string[];
+  focusAssets?: string[];
   sectors: CanonicalSectorConfig[];
 }
 

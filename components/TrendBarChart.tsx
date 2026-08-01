@@ -9,6 +9,8 @@ interface Props {
   sectors: SectorSnapshot[];
   signals?: Map<string, SectorSignal>;
   isMobile?: boolean;
+  highlightedSectorIds?: ReadonlySet<string>;
+  hasSearchHighlight?: boolean;
 }
 
 const PERIODS = [
@@ -18,7 +20,13 @@ const PERIODS = [
   { key: "30d" as const, label: "30d" },
 ];
 
-export default function TrendBarChart({ sectors, signals, isMobile }: Props) {
+export default function TrendBarChart({
+  sectors,
+  signals,
+  isMobile,
+  highlightedSectorIds,
+  hasSearchHighlight = false,
+}: Props) {
   const ROW_H = isMobile ? 30 : 34;
   const BAR_H = isMobile ? 14 : 18;
   const LABEL_W = isMobile ? 76 : 110;
@@ -64,11 +72,14 @@ export default function TrendBarChart({ sectors, signals, isMobile }: Props) {
 
   const chartH = TITLE_H + HEADER_H + rows.length * ROW_H + PAD + FOOTER_H;
 
-  const chartStart = LABEL_W + PAD;
-  const chartEnd = width - PAD - SIGNAL_W;
-  const chartWidth = chartEnd - chartStart;
   const n = PERIODS.length;
-  const colW = width > 0 ? Math.max((chartWidth - COL_GAP * (n - 1)) / n, 50) : 50;
+  const minimumSvgWidth =
+    LABEL_W + PAD * 2 + SIGNAL_W + n * 50 + COL_GAP * (n - 1);
+  const svgWidth = Math.max(width, minimumSvgWidth);
+  const chartStart = LABEL_W + PAD;
+  const chartEnd = svgWidth - PAD - SIGNAL_W;
+  const chartWidth = chartEnd - chartStart;
+  const colW = Math.max((chartWidth - COL_GAP * (n - 1)) / n, 50);
   const NEG_RATIO = 0.4;
 
   const maxVals = PERIODS.map((p) => {
@@ -99,7 +110,7 @@ export default function TrendBarChart({ sectors, signals, isMobile }: Props) {
         fontVariantNumeric: "tabular-nums",
       }}
     >
-      <svg width={width} height={chartH} style={{ display: "block" }}>
+      <svg width={svgWidth} height={chartH} style={{ display: "block" }}>
         {/* Title */}
         <text x={PAD} y={isMobile ? 16 : 20} fontSize={isMobile ? 10 : 12} fontWeight={600} fill="#1f2328">
           {isMobile ? "板块对比" : "多时间维度板块对比"}
@@ -181,16 +192,25 @@ export default function TrendBarChart({ sectors, signals, isMobile }: Props) {
         {rows.map((row, ri) => {
           const rowY = TITLE_H + HEADER_H + ri * ROW_H;
           const labelY = rowY + ROW_H / 2;
+          const rowHighlighted = highlightedSectorIds?.has(row.id) ?? false;
+          const rowOpacity =
+            hasSearchHighlight && !rowHighlighted ? 0.25 : 1;
 
           return (
-            <g key={row.id}>
+            <g key={row.id} opacity={rowOpacity}>
               {/* Row stripe */}
               <rect
                 x={chartStart}
                 y={rowY}
                 width={chartWidth + SIGNAL_W}
                 height={ROW_H}
-                fill={ri % 2 === 0 ? "#ffffff" : "#f8f9fb"}
+                fill={
+                  rowHighlighted
+                    ? "#eff6ff"
+                    : ri % 2 === 0
+                      ? "#ffffff"
+                      : "#f8f9fb"
+                }
               />
 
               {/* Sector name */}
@@ -303,15 +323,18 @@ export default function TrendBarChart({ sectors, signals, isMobile }: Props) {
 
               {/* Signal icon */}
               {signals && signals.has(row.id) && (
-                <text
-                  x={chartEnd + SIGNAL_W / 2}
-                  y={labelY}
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  fontSize={isMobile ? 12 : 14}
-                >
-                  {signals.get(row.id)!.icon}
-                </text>
+                <g>
+                  <title>{signals.get(row.id)!.reason}</title>
+                  <text
+                    x={chartEnd + SIGNAL_W / 2}
+                    y={labelY}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fontSize={isMobile ? 12 : 14}
+                  >
+                    {signals.get(row.id)!.icon}
+                  </text>
+                </g>
               )}
             </g>
           );
@@ -320,8 +343,8 @@ export default function TrendBarChart({ sectors, signals, isMobile }: Props) {
         {/* Usage footer */}
         <text x={PAD} y={chartH - 12} fontSize={isMobile ? 8 : 10} fill="#9ca3af">
           {isMobile
-            ? "24h/3d/7d/30d 四列对比 · 圆点=成交量 · 🔥强 💰回 ⚠️诱 ❄️弱"
-            : "用法：四列同屏对比趋势。圆点大小=成交量占比。🔥强势确认 💰回调机会 ⚠️诱多陷阱 ❄️弱势回避"}
+            ? "四周期对比 · 圆点=成交量 · ↑↓排名 · ▲▼异动"
+            : "四列同屏对比 · 圆点大小=成交量 · ↑↓排名变化 · ▲▼历史异动（悬停查看原因）"}
         </text>
       </svg>
     </div>

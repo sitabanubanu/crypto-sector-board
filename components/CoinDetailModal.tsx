@@ -69,6 +69,9 @@ export default function CoinDetailModal({ coin, sectorName, sector, closes, onCl
 
       {/* Modal */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="coin-detail-title"
         style={{
           position: "fixed",
           top: "50%",
@@ -96,7 +99,7 @@ export default function CoinDetailModal({ coin, sectorName, sector, closes, onCl
           }}
         >
           <div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: "#1f2328" }}>
+            <div id="coin-detail-title" style={{ fontSize: 18, fontWeight: 700, color: "#1f2328" }}>
               {coin.symbol}
             </div>
             <div style={{ fontSize: 13, color: "#6b7280", marginTop: 2 }}>
@@ -108,6 +111,7 @@ export default function CoinDetailModal({ coin, sectorName, sector, closes, onCl
           </div>
           <button
             onClick={onClose}
+            aria-label="关闭币种详情"
             style={{
               background: "none",
               border: "none",
@@ -153,9 +157,9 @@ export default function CoinDetailModal({ coin, sectorName, sector, closes, onCl
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 10, color: "#9ca3af", marginBottom: 2 }}>
-                换手率
+                成交活跃度（量/市值）
                 {turnover != null && sectorTurnover != null && turnover > sectorTurnover * 2 && (
-                  <span style={{ color: "#e53e3e", marginLeft: 4 }}>⚠ 异常活跃</span>
+                  <span style={{ color: "#e53e3e", marginLeft: 4 }}>⚠ 高于板块</span>
                 )}
               </div>
               <div style={{ fontSize: 13, fontWeight: 600, color: "#1f2328" }}>
@@ -242,7 +246,7 @@ export default function CoinDetailModal({ coin, sectorName, sector, closes, onCl
             {evalText || "数据不足，无法评价"}
           </div>
           <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 8, lineHeight: 1.5 }}>
-            高换手率 = 资金关注度高。异常活跃（换手率超过板块均值 2 倍）可能意味着出货或吸筹。
+            成交活跃度只表示成交量相对市值的大小，不等同于真实资金流入，也不能据此判断吸筹或出货。
           </div>
         </div>
       </div>

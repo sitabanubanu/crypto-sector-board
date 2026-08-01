@@ -59,7 +59,7 @@ export const BoardResponseSchema = z
       .object({
         snapshot: DailySnapshotSchema,
         assets: z.array(PublicAssetSchema).min(1),
-        holdings: z.array(PublicAssetIdSchema),
+        focusAssets: z.array(PublicAssetIdSchema),
       })
       .strict(),
     meta: BoardMetaSchema,

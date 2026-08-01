@@ -1,0 +1,30 @@
+name: Deploy Production
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vercel-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Verify deployment credential
+        run: test -n "$VERCEL_TOKEN"
+
+      - name: Deploy the linked project to Vercel Production
+        run: npx --yes vercel@58.4.4 deploy --prod --yes --token "$VERCEL_TOKEN"

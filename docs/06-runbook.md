@@ -128,6 +128,21 @@ JSON 模式会完全绕过数据库，`DATA_DUAL_READ` 在该模式下自动失�
 
 Vercel deployment 回滚与 `DATA_BACKEND=json` 是两层不同的保护：前者回滚代码，后者只回滚数据读路径。
 
+### 手动发布 Production
+
+项目不启用 Git push 自动部署。发布前先确认 `main` 的 `Quality` workflow 通过，然后在
+GitHub Actions 手动运行 `Deploy Production`。该 workflow 只在 `workflow_dispatch` 时执行，
+使用仓库 Secret `VERCEL_TOKEN` 和已提交的 `.vercel/project.json` 发布当前 `main`。
+
+本机已有 Vercel 登录态时，也可以从已确认且工作树干净的提交执行：
+
+```bash
+npx vercel deploy --prod --yes
+```
+
+发布后至少复验主页、`/api/v1/board`、`/api/v1/history` 和
+`/api/v1/data-health`；不要在日志或文档中输出数据库连接串、Vercel token 或 Telegram token。
+
 ## 8. 常见数据问题
 
 | 现象 | 可能原因 | 处理 |

@@ -874,18 +874,19 @@ Vercel 目前通过 Marketplace 接入 Neon、Supabase 等 PostgreSQL 服务，�
 
 时间是假设一名开发者专注执行的粗略估算，实际以验收门为准。
 
-### 当前执行进度（2026-07-30）
+### 当前执行进度（2026-08-02）
 
 | 阶段 | 状态 | 说明 |
 |---|---|---|
-| P0 | 本地实现与验证完成，待发布 | 安全止血、依赖修复、基础质量门、审计策略和 CI 已落地 |
-| P1 | 本地实现与验证完成，待发布 | 测试框架、数据契约、三家 provider fixtures、指标与快照校验、缓存和 watchlist 状态机均已落地 |
-| P2 | Preview 云端验收完成，Production 待接入 | Neon/ PostgreSQL（仅 Preview）、Drizzle schema、migration、56 资产注册表、168 provider 状态、v2 板块配置、seed、映射巡检和 Preview 部署已完成 |
-| P3 | Preview 云端验收完成，Production 待接入 | 幂等采集、补洞、旧快照导入、data-health、只写数据库 workflow 和 31 天历史补齐已完成 |
-| P4 | Preview 云端验收完成，Production 待接入 | DB BFF、页面切换、SWR、双读、JSON 回滚、批量历史和最终 Preview 部署已完成 |
-| P5～P6 | 未开始 | 持仓/信号/相关性/回测正确性和最终体验继续按阶段独立验收 |
+| P0 | Production 已完成 | 安全止血、依赖修复、基础质量门、审计策略和 CI 已落地 |
+| P1 | Production 已完成 | 测试框架、数据契约、三家 provider fixtures、指标与快照校验、缓存和 watchlist 状态机均已落地 |
+| P2 | Production 已完成 | Neon/PostgreSQL、Drizzle schema、migration、56 资产注册表、168 provider 状态、v2 板块配置、seed 和映射巡检已完成 |
+| P3 | Production 已完成 | 幂等采集、补洞、旧快照导入、data-health、只写数据库 workflow 和 31 天历史补齐已完成 |
+| P4 | Production 已完成 | DB BFF、页面切换、SWR、双读、JSON 回滚和批量历史已完成 |
+| P5.0/P5.1 | 本地实现与验收完成，待发布 | 关注资产语义、正确相关性、市场脉搏、可解释信号和首页搜索已通过 99 项测试及浏览器回归 |
+| P5.2～P6 | 未开始 | 真实持仓、无前视回测、Telegram、移动专用列表和最终体验继续独立验收 |
 
-当前 P0～P4 改动仍在本地修复分支和工作区中，尚未提交或推送；数据库与部署操作仅限 Preview，尚未连接 Production，也不代表线上生产环境已经修复。
+P0～P4 已发布到 GitHub `main` 和 Vercel Production。当前未发布内容仅为 P5.0/P5.1；本轮不创建新数据库、不启用付费数据源，也不修改现有 Preview/Production 共用 Neon Free 数据库的临时约定。
 
 复核与修正记录（2026-07-30）：
 
@@ -1055,6 +1056,18 @@ Vercel 目前通过 Marketplace 接入 Neon、Supabase 等 PostgreSQL 服务，�
 - 无 lookahead。
 - 回测包含费用、滑点、样本和缺口报告。
 - 持仓不再使用全网市值作为用户资产。
+
+P5.0 + P5.1 完成记录（2026-08-02）：
+
+- [x] `holdings` 全链路改名为 `focusAssets`；界面只表达“关注资产”，不再伪装成真实持仓。
+- [x] 相关性改用 UTC 日收益、日期 inner join、至少 30 个共同样本；样本不足或零方差显示 `N/A`，矩阵保留每对样本数。
+- [x] 新增市场/板块广度、中位数、贡献者、贡献集中度、当前/历史排名、排名变化和 z-score。
+- [x] 信号统一为 `market-pulse-v1`，包含原因、规则版本、`asOf`、样本数和质量状态；覆盖率、时效或样本不足时不触发。
+- [x] 首页新增市场脉搏、资产/板块搜索和两张主图联动高亮；精确资产搜索可直接打开详情。
+- [x] 16 个测试文件、99 个测试和完整 `npm run check` 通过；桌面与 390×844 浏览器控制台 0 error/0 warning，移动端无横向溢出。
+- [ ] 推送 GitHub `main` 并部署 Vercel Production 后完成线上验收。
+
+详细口径、实施拆分和验收记录见 `docs/12-p5-market-pulse.md`。真实持仓、point-in-time 回测、Telegram workflow 和移动端专用列表不在本批范围内。
 
 ### 阶段 P6：体验与上线，3～5 天
 

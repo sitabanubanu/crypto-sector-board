@@ -8,7 +8,8 @@ interface Props {
   isMobile: boolean;
 }
 
-function corrColor(r: number): string {
+function corrColor(r: number | null): string {
+  if (r == null) return "#e5e7eb";
   // Dark red for high positive, white for zero, dark green for high negative
   const abs = Math.abs(r);
   if (r >= 0) {
@@ -26,7 +27,8 @@ function corrColor(r: number): string {
   }
 }
 
-function textColorForCorr(r: number): string {
+function textColorForCorr(r: number | null): string {
+  if (r == null) return "#94a3b8";
   return Math.abs(r) >= 0.5 ? "#ffffff" : "#1f2328";
 }
 
@@ -46,6 +48,8 @@ export default function CorrelationHeatmap({ matrix, isMobile }: Props) {
       {/* Toggle button — always visible */}
       <button
         onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        aria-controls="correlation-dialog"
         style={{
           position: "fixed",
           right: 12,
@@ -78,6 +82,10 @@ export default function CorrelationHeatmap({ matrix, isMobile }: Props) {
             }}
           />
           <div
+            id="correlation-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="correlation-title"
             style={{
               position: "fixed",
               top: "50%",
@@ -101,11 +109,12 @@ export default function CorrelationHeatmap({ matrix, isMobile }: Props) {
                 marginBottom: 12,
               }}
             >
-              <span style={{ fontSize: 14, fontWeight: 700, color: "#1f2328" }}>
+              <span id="correlation-title" style={{ fontSize: 14, fontWeight: 700, color: "#1f2328" }}>
                 板块相关性矩阵
               </span>
               <button
                 onClick={() => setOpen(false)}
+                aria-label="关闭相关性矩阵"
                 style={{
                   background: "none",
                   border: "none",
@@ -120,14 +129,15 @@ export default function CorrelationHeatmap({ matrix, isMobile }: Props) {
 
             {!hasData ? (
               <div style={{ textAlign: "center", padding: 40, color: "#9ca3af", fontSize: 12, lineHeight: 1.6 }}>
-                等待 30 天 K 线数据加载…
+                暂无可对齐的板块日收益…
                 <br />
-                <span style={{ fontSize: 10 }}>（需要 Gate.io 实时连接成功后自动计算）</span>
+                <span style={{ fontSize: 10 }}>至少需要 30 个共同 UTC 日收益样本</span>
               </div>
             ) : (
               <>
                 <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 8 }}>
-                  基于近 30 天日收益率计算 · Pearson 相关系数 · 红=正相关 绿=负相关
+                  非重叠 UTC 日收益 · 当前市值固定权重 · Pearson · 至少 {matrix.minimumSampleSize} 个共同样本
+                  {matrix.asOf ? ` · 截至 ${matrix.asOf}` : ""}
                 </div>
                 <svg width={svgW} height={svgH} style={{ display: "block" }}>
                   {/* Column labels */}
@@ -158,8 +168,15 @@ export default function CorrelationHeatmap({ matrix, isMobile }: Props) {
                       >
                         {name.length > 6 ? name.slice(0, 5) + "…" : name}
                       </text>
-                      {matrix.matrix[i].map((val, j) => (
+                      {matrix.matrix[i].map((val, j) => {
+                        const count = matrix.sampleCounts[i][j];
+                        const description =
+                          i === j
+                            ? `${matrix.sectorNames[i]}，有效日收益 ${count} 个`
+                            : `${matrix.sectorNames[i]} 与 ${matrix.sectorNames[j]}：${val == null ? "数据不足" : `相关系数 ${val.toFixed(3)}`}，共同样本 n=${count}`;
+                        return (
                         <g key={`cell-${i}-${j}`}>
+                          <title>{description}</title>
                           <rect
                             x={labelW + j * cellSize}
                             y={24 + i * cellSize}
@@ -177,10 +194,11 @@ export default function CorrelationHeatmap({ matrix, isMobile }: Props) {
                             fontWeight={i === j ? 700 : 500}
                             fill={textColorForCorr(val)}
                           >
-                            {i === j ? "·" : (val * 100).toFixed(0)}
+                            {i === j ? "·" : val == null ? "N/A" : (val * 100).toFixed(0)}
                           </text>
                         </g>
-                      ))}
+                        );
+                      })}
                     </g>
                   ))}
                 </svg>
@@ -192,7 +210,7 @@ export default function CorrelationHeatmap({ matrix, isMobile }: Props) {
                     lineHeight: 1.6,
                   }}
                 >
-                  提示：相关性 &gt; 0.7 的板块同涨同跌，分散持仓时尽量避开高度相关的板块组合
+                  单元格悬停可查看共同样本数。高相关只表示样本期内历史共同波动，不代表因果，也不是未来走势承诺。
                 </div>
               </>
             )}

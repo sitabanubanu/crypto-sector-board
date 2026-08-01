@@ -1,95 +1,113 @@
-import type { SectorConfig } from "./types";
+import {
+  buildSectorReturnSeries,
+  innerJoinSectorReturns,
+  type AssetHistoryMap,
+  type SectorReturnPoint,
+} from "./sector-history";
+import type { SectorSnapshot } from "./types";
 
-// Daily return series for one sector (most recent first)
-function sectorDailyReturns(
-  sector: SectorConfig,
-  klines: Map<string, number[]>,
-): number[] | null {
-  const series: number[][] = [];
-  for (const coinId of sector.coins) {
-    const closes = klines.get(coinId);
-    if (!closes || closes.length < 5) continue;
-    // Convert closes to daily returns (most recent at index 0)
-    const returns: number[] = [];
-    for (let i = 0; i < closes.length - 1; i++) {
-      if (closes[i + 1] > 0) {
-        returns.push((closes[i] - closes[i + 1]) / closes[i + 1]);
-      }
-    }
-    series.push(returns);
-  }
-  if (series.length === 0) return null;
+export const MIN_CORRELATION_SAMPLE_SIZE = 30;
 
-  // Simple average across coins in the sector (aligned to same length)
-  const minLen = Math.min(...series.map((s) => s.length));
-  const avg: number[] = [];
-  for (let i = 0; i < minLen; i++) {
-    let sum = 0;
-    for (const s of series) sum += s[i];
-    avg.push(sum / series.length);
-  }
-  return avg;
-}
+function pearson(
+  pairs: ReadonlyArray<{ left: number; right: number }>,
+): number | null {
+  const n = pairs.length;
+  if (n === 0) return null;
 
-// Pearson correlation coefficient
-function pearson(a: number[], b: number[]): number {
-  const n = Math.min(a.length, b.length);
-  if (n < 5) return 0;
-
-  let sumA = 0, sumB = 0, sumAB = 0, sumA2 = 0, sumB2 = 0;
-  for (let i = 0; i < n; i++) {
-    sumA += a[i];
-    sumB += b[i];
-    sumAB += a[i] * b[i];
-    sumA2 += a[i] * a[i];
-    sumB2 += b[i] * b[i];
+  let sumLeft = 0;
+  let sumRight = 0;
+  let sumProduct = 0;
+  let sumLeftSquared = 0;
+  let sumRightSquared = 0;
+  for (const pair of pairs) {
+    sumLeft += pair.left;
+    sumRight += pair.right;
+    sumProduct += pair.left * pair.right;
+    sumLeftSquared += pair.left * pair.left;
+    sumRightSquared += pair.right * pair.right;
   }
 
-  const num = n * sumAB - sumA * sumB;
-  const den = Math.sqrt((n * sumA2 - sumA * sumA) * (n * sumB2 - sumB * sumB));
-  return den === 0 ? 0 : num / den;
+  const numerator = n * sumProduct - sumLeft * sumRight;
+  const denominator = Math.sqrt(
+    (n * sumLeftSquared - sumLeft * sumLeft) *
+      (n * sumRightSquared - sumRight * sumRight),
+  );
+  if (!Number.isFinite(denominator) || denominator <= 0) return null;
+  const value = numerator / denominator;
+  return Number.isFinite(value) ? Math.max(-1, Math.min(1, value)) : null;
 }
 
 export interface CorrelationMatrix {
   sectorIds: string[];
   sectorNames: string[];
-  matrix: number[][]; // matrix[i][j] = corr(sector i, sector j)
+  matrix: Array<Array<number | null>>;
+  sampleCounts: number[][];
+  minimumSampleSize: number;
+  asOf: string | null;
+  weighting: "current_market_cap";
 }
 
 export function buildCorrelationMatrix(
-  sectorsConfig: SectorConfig[],
-  klines: Map<string, number[]>,
+  sectors: ReadonlyArray<SectorSnapshot>,
+  historyByAssetId: AssetHistoryMap,
+  minimumSampleSize = MIN_CORRELATION_SAMPLE_SIZE,
 ): CorrelationMatrix | null {
-  // Compute daily return series for each sector
-  const returnSeries: { id: string; name: string; returns: number[] }[] = [];
-  for (const sc of sectorsConfig) {
-    const r = sectorDailyReturns(sc, klines);
-    if (r && r.length >= 5) {
-      returnSeries.push({ id: sc.id, name: sc.name, returns: r });
-    }
-  }
+  const series = sectors
+    .map((sector) => ({
+      id: sector.id,
+      name: sector.name,
+      returns: buildSectorReturnSeries(sector, historyByAssetId),
+    }))
+    .filter((sector) => sector.returns.length > 0);
+  if (series.length < 2) return null;
 
-  if (returnSeries.length < 3) return null;
-
-  const n = returnSeries.length;
-  const matrix: number[][] = [];
-
-  for (let i = 0; i < n; i++) {
-    matrix[i] = [];
-    for (let j = 0; j < n; j++) {
-      if (i === j) {
-        matrix[i][j] = 1;
-      } else if (j < i) {
-        matrix[i][j] = matrix[j][i];
-      } else {
-        matrix[i][j] = pearson(returnSeries[i].returns, returnSeries[j].returns);
+  const matrix: Array<Array<number | null>> = [];
+  const sampleCounts: number[][] = [];
+  for (let rowIndex = 0; rowIndex < series.length; rowIndex += 1) {
+    matrix[rowIndex] = [];
+    sampleCounts[rowIndex] = [];
+    for (
+      let columnIndex = 0;
+      columnIndex < series.length;
+      columnIndex += 1
+    ) {
+      if (columnIndex < rowIndex) {
+        matrix[rowIndex][columnIndex] = matrix[columnIndex][rowIndex];
+        sampleCounts[rowIndex][columnIndex] =
+          sampleCounts[columnIndex][rowIndex];
+        continue;
       }
+      if (rowIndex === columnIndex) {
+        const count = series[rowIndex].returns.length;
+        sampleCounts[rowIndex][columnIndex] = count;
+        matrix[rowIndex][columnIndex] =
+          count >= minimumSampleSize ? 1 : null;
+        continue;
+      }
+
+      const joined = innerJoinSectorReturns(
+        series[rowIndex].returns,
+        series[columnIndex].returns,
+      );
+      sampleCounts[rowIndex][columnIndex] = joined.length;
+      matrix[rowIndex][columnIndex] =
+        joined.length >= minimumSampleSize
+          ? pearson(joined)
+          : null;
     }
   }
+
+  const dates = series.flatMap((sector) =>
+    sector.returns.map((point: SectorReturnPoint) => point.date),
+  );
 
   return {
-    sectorIds: returnSeries.map((s) => s.id),
-    sectorNames: returnSeries.map((s) => s.name),
+    sectorIds: series.map((sector) => sector.id),
+    sectorNames: series.map((sector) => sector.name),
     matrix,
+    sampleCounts,
+    minimumSampleSize,
+    asOf: dates.sort().at(-1) ?? null,
+    weighting: "current_market_cap",
   };
 }

@@ -24,7 +24,7 @@ export const SectorCatalogSchema = z
     lastUpdated: z.string().date(),
     effectiveFrom: z.string().date(),
     mainStreamThreshold: z.number().finite().nonnegative(),
-    holdings: z.array(AssetIdSchema).optional(),
+    focusAssets: z.array(AssetIdSchema).optional(),
     sectors: z.array(CanonicalSectorSchema).min(1),
   })
   .strict()
@@ -68,12 +68,12 @@ export const SectorCatalogSchema = z
       });
     });
 
-    catalog.holdings?.forEach((assetId, holdingIndex) => {
+    catalog.focusAssets?.forEach((assetId, focusIndex) => {
       if (!getAssetDefinition(assetId)) {
         context.addIssue({
           code: "custom",
-          path: ["holdings", holdingIndex],
-          message: `Unknown holding asset ID: ${assetId}`,
+          path: ["focusAssets", focusIndex],
+          message: `Unknown focus asset ID: ${assetId}`,
         });
       }
     });

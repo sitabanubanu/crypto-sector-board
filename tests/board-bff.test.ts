@@ -239,7 +239,7 @@ describe("BFF contracts and dual-read comparison", () => {
           { assetId: "bitcoin", symbol: "BTC", name: "Bitcoin" },
           { assetId: "ethereum", symbol: "ETH", name: "Ethereum" },
         ],
-        holdings: ["bitcoin"],
+        focusAssets: ["bitcoin"],
       },
       meta: {
         ...snapshot.dataQuality,
