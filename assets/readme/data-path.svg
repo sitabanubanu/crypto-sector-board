@@ -76,7 +76,7 @@
             stroke="#d0d7de" stroke-width="2"/>
       <text x="974" y="166" fill="#57606a" font-size="18" font-weight="700">VIEW</text>
       <text x="974" y="208" fill="#1f2328" font-size="23" font-weight="800">Next.js 看板</text>
-      <text x="974" y="245" fill="#424a53" font-size="19">SSR 首屏 + SWR</text>
+      <text x="974" y="245" fill="#424a53" font-size="19">脉搏 / 搜索 / 相关性</text>
       <text x="974" y="276" fill="#424a53" font-size="19">来源 / 覆盖 / 新鲜度</text>
     </g>
   </g>

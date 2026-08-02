@@ -1,71 +1,83 @@
 <svg xmlns="http://www.w3.org/2000/svg"
-     width="1200" height="400" viewBox="0 0 1200 400"
+     width="1200" height="420" viewBox="0 0 1200 420"
      role="img" aria-labelledby="title desc">
   <title id="title">加密板块强弱看板</title>
-  <desc id="desc">把 56 个加密资产归入 14 个板块，并用 Treemap 比较四个时间周期的强弱。</desc>
+  <desc id="desc">每小时汇总 56 个资产和 14 个板块，用市场广度、排名变化、贡献者与 Treemap 观察板块轮动。</desc>
 
-  <rect width="1200" height="400" rx="28" fill="#f5f6f8"/>
-  <rect x="1" y="1" width="1198" height="398" rx="27"
+  <rect width="1200" height="420" rx="28" fill="#f5f6f8"/>
+  <rect x="1" y="1" width="1198" height="418" rx="27"
         fill="none" stroke="#d0d7de" stroke-width="2"/>
 
   <g id="title-block"
      font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif">
-    <text x="58" y="57" fill="#57606a" font-size="18" font-weight="700"
-          letter-spacing="2">MARKET STRUCTURE / PERSONAL DASHBOARD</text>
-    <text x="56" y="137" fill="#1f2328" font-size="62" font-weight="800">加密板块</text>
-    <text x="56" y="205" fill="#1f2328" font-size="62" font-weight="800">强弱看板</text>
-    <text x="58" y="257" fill="#424a53" font-size="24" font-weight="500">
-      把逐币涨跌放回板块结构，
+    <text x="58" y="54" fill="#57606a" font-size="18" font-weight="700"
+          letter-spacing="2">CRYPTO SECTOR MAP / MARKET PULSE</text>
+    <text x="56" y="132" fill="#1f2328" font-size="60" font-weight="800">加密板块</text>
+    <text x="56" y="198" fill="#1f2328" font-size="60" font-weight="800">强弱看板</text>
+    <text x="58" y="252" fill="#1f2328" font-size="26" font-weight="700">
+      先看市场广度，再看板块轮动。
     </text>
-    <text x="58" y="291" fill="#424a53" font-size="24" font-weight="500">
-      用同一口径比较 24h · 3d · 7d · 30d。
+    <text x="58" y="291" fill="#57606a" font-size="21" font-weight="500">
+      56 个资产 · 14 个板块 · 4 个周期 · 每小时更新
     </text>
   </g>
 
   <g id="metadata"
      font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
-     font-size="18" font-weight="700">
-    <rect x="58" y="330" width="142" height="36" rx="18" fill="#ffffff" stroke="#d0d7de"/>
-    <text x="78" y="354" fill="#1f2328">14 SECTORS</text>
-    <rect x="212" y="330" width="132" height="36" rx="18" fill="#ffffff" stroke="#d0d7de"/>
-    <text x="232" y="354" fill="#1f2328">56 ASSETS</text>
-    <rect x="356" y="330" width="152" height="36" rx="18" fill="#ffffff" stroke="#d0d7de"/>
-    <text x="376" y="354" fill="#1f2328">4 HORIZONS</text>
+     font-size="17" font-weight="700">
+    <rect x="58" y="336" width="138" height="38" rx="19" fill="#ffffff" stroke="#d0d7de"/>
+    <circle cx="79" cy="355" r="6" fill="#38a169"/>
+    <text x="94" y="361" fill="#1f2328">LIVE DATA</text>
+    <rect x="208" y="336" width="164" height="38" rx="19" fill="#ffffff" stroke="#d0d7de"/>
+    <text x="229" y="361" fill="#1f2328">EXPLAINABLE</text>
+    <rect x="384" y="336" width="146" height="38" rx="19" fill="#ffffff" stroke="#d0d7de"/>
+    <text x="405" y="361" fill="#1f2328">DB BACKED</text>
   </g>
 
-  <g id="treemap-proof"
+  <g id="product-proof"
      font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif">
-    <rect x="650" y="32" width="510" height="336" rx="20" fill="#ffffff"
+    <rect x="626" y="28" width="534" height="364" rx="22" fill="#ffffff"
           stroke="#d0d7de" stroke-width="2"/>
-    <text x="676" y="65" fill="#57606a" font-size="18" font-weight="700"
-          letter-spacing="1">RED = UP  /  GREEN = DOWN</text>
 
-    <g stroke="#ffffff" stroke-width="6">
-      <rect x="670" y="82" width="238" height="148" rx="8" fill="#fed7d7"/>
-      <rect x="908" y="82" width="232" height="148" rx="8" fill="#fc8181"/>
-      <rect x="670" y="230" width="150" height="114" rx="8" fill="#c6f6d5"/>
-      <rect x="820" y="230" width="166" height="114" rx="8" fill="#e53e3e"/>
-      <rect x="986" y="230" width="154" height="114" rx="8" fill="#68d391"/>
+    <g id="pulse-summary">
+      <text x="650" y="62" fill="#1f2328" font-size="21" font-weight="800">市场脉搏</text>
+      <text x="650" y="91" fill="#e53e3e" font-size="25" font-weight="800">广度 27%</text>
+      <text x="770" y="89" fill="#57606a" font-size="18" font-weight="600">n=56 · 对比上一完整 UTC 日</text>
+
+      <rect x="650" y="109" width="151" height="72" rx="12" fill="#fff5f5" stroke="#fc8181"/>
+      <text x="666" y="136" fill="#1f2328" font-size="19" font-weight="800">#1 其他主流</text>
+      <text x="666" y="164" fill="#e53e3e" font-size="18" font-weight="700">↑1 · 贡献 PI</text>
+
+      <rect x="812" y="109" width="151" height="72" rx="12" fill="#ffffff" stroke="#d0d7de"/>
+      <text x="828" y="136" fill="#1f2328" font-size="19" font-weight="800">#2 隐私币</text>
+      <text x="828" y="164" fill="#57606a" font-size="18" font-weight="700">— · XMR/ZEC</text>
+
+      <rect x="974" y="109" width="162" height="72" rx="12" fill="#ffffff" stroke="#d0d7de"/>
+      <text x="990" y="136" fill="#1f2328" font-size="19" font-weight="800">#3 L2 &amp; 扩容</text>
+      <text x="990" y="164" fill="#57606a" font-size="18" font-weight="700">→ · MNT/ARB</text>
+    </g>
+
+    <g id="treemap" stroke="#ffffff" stroke-width="5">
+      <rect x="650" y="201" width="236" height="164" rx="10" fill="#c6f6d5"/>
+      <rect x="886" y="201" width="129" height="164" rx="10" fill="#fed7d7"/>
+      <rect x="1015" y="201" width="121" height="92" rx="10" fill="#38a169"/>
+      <rect x="1015" y="293" width="72" height="72" rx="10" fill="#fc8181"/>
+      <rect x="1087" y="293" width="49" height="72" rx="10" fill="#68d391"/>
     </g>
 
     <g fill="#1f2328">
-      <text x="692" y="115" font-size="22" font-weight="800">LAYER 1</text>
-      <text x="692" y="144" font-size="18" font-weight="600">ETH · SOL · BNB</text>
-      <text x="692" y="203" font-size="18" fill="#57606a">12 assets</text>
+      <text x="674" y="232" font-size="21" font-weight="800">LAYER 1</text>
+      <text x="674" y="266" font-size="24" font-weight="800">ETH · SOL</text>
+      <text x="674" y="337" font-size="18" fill="#57606a">市值面积 · 24h -0.85%</text>
 
-      <text x="932" y="121" font-size="25" font-weight="800">BTC</text>
-      <text x="932" y="151" font-size="18" font-weight="600">market anchor</text>
+      <text x="910" y="232" font-size="21" font-weight="800">BTC</text>
+      <text x="910" y="286" font-size="28" font-weight="800">-0.39%</text>
 
-      <text x="692" y="264" font-size="21" font-weight="800">DeFi</text>
-      <text x="692" y="292" font-size="18" font-weight="600">UNI · AAVE</text>
+      <text x="1036" y="232" font-size="20" font-weight="800" fill="#ffffff">DeFi</text>
+      <text x="1036" y="260" font-size="18" font-weight="700" fill="#ffffff">-4.57%</text>
 
-      <text x="1008" y="264" font-size="21" font-weight="800">L2</text>
-      <text x="1008" y="292" font-size="18" font-weight="600">ARB · OP</text>
-    </g>
-
-    <g fill="#ffffff">
-      <text x="844" y="264" font-size="21" font-weight="800">AI</text>
-      <text x="844" y="292" font-size="18" font-weight="600">FET · RENDER</text>
+      <text x="1033" y="326" font-size="18" font-weight="800">隐私币</text>
+      <text x="1098" y="326" font-size="18" font-weight="800" fill="#ffffff">AI</text>
     </g>
   </g>
 </svg>
