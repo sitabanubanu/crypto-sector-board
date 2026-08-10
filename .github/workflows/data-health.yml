@@ -2,7 +2,9 @@ name: Data Health
 
 on:
   schedule:
-    - cron: "37 1 * * *"
+    # Run after the hourly ingestion repair window, not immediately after the
+    # busiest part of the UTC hour.
+    - cron: "23 5 * * *"
   workflow_dispatch:
 
 permissions:
@@ -15,7 +17,7 @@ concurrency:
 jobs:
   report:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 40
     env:
       DATABASE_URL: ${{ secrets.INGEST_DATABASE_URL }}
     steps:
@@ -25,4 +27,19 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run data:health
+      - name: Run data health report with bounded retries
+        shell: bash
+        run: |
+          set +e
+          final_status=1
+          for attempt in 1 2 3; do
+            npm run data:health
+            final_status=$?
+            if [ "$final_status" -eq 0 ]; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              sleep $((attempt * 600))
+            fi
+          done
+          exit "$final_status"

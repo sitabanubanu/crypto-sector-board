@@ -32,10 +32,20 @@ const LIVE_PROVIDERS = [
 const PROVIDER_SUCCESS_STALE_MS = 3 * HOUR_MS;
 const QUOTE_STALE_MS = 2 * HOUR_MS;
 const STUCK_RUN_MS = 30 * 60 * 1_000;
+// Exchanges expose closed candles with a small, variable delay. Keep the
+// latest closed bucket out of the coverage SLO, while quote freshness still
+// uses the real current time and remains strict.
+const CANDLE_COVERAGE_GRACE_MS = HOUR_MS;
 
 export interface DataHealthReport {
   generatedAt: string;
   status: "healthy" | "degraded" | "critical";
+  coverageAsOf: string;
+  latestCandleAt: string | null;
+  candleLagHours: number | null;
+  latestQuoteAt: string | null;
+  quoteLagMinutes: number | null;
+  missingBucketCount: number;
   providers: Array<{
     provider: IngestionProvider;
     activeMappings: number;
@@ -137,9 +147,20 @@ export async function getDataHealthReport<
   database: HealthDatabase<TResult>,
   now = new Date(),
 ): Promise<DataHealthReport> {
-  const hourEnd = new Date(Math.floor(now.getTime() / HOUR_MS) * HOUR_MS);
-  const start24h = new Date(hourEnd.getTime() - 24 * HOUR_MS);
-  const start7d = new Date(hourEnd.getTime() - 7 * 24 * HOUR_MS);
+  const currentHour = new Date(
+    Math.floor(now.getTime() / HOUR_MS) * HOUR_MS,
+  );
+  const candleHourEnd = new Date(
+    currentHour.getTime() - CANDLE_COVERAGE_GRACE_MS,
+  );
+  const candleStart24h = new Date(
+    candleHourEnd.getTime() - 24 * HOUR_MS,
+  );
+  const candleStart7d = new Date(
+    candleHourEnd.getTime() - 7 * 24 * HOUR_MS,
+  );
+  const runStart24h = new Date(now.getTime() - 24 * HOUR_MS);
+  const runStart7d = new Date(now.getTime() - 7 * 24 * HOUR_MS);
   const mappingStaleBefore = new Date(now.getTime() - 30 * 24 * HOUR_MS);
   const quoteStaleBefore = new Date(now.getTime() - QUOTE_STALE_MS);
   const providerSuccessStaleBefore = new Date(
@@ -175,8 +196,8 @@ export async function getDataHealthReport<
         and(
           eq(marketCandles.timeframe, "1h"),
           inArray(marketCandles.provider, ["gate", "okx"]),
-          gte(marketCandles.openTime, start7d),
-          lt(marketCandles.openTime, hourEnd),
+          gte(marketCandles.openTime, candleStart7d),
+          lt(marketCandles.openTime, candleHourEnd),
         ),
       ),
     database
@@ -193,7 +214,7 @@ export async function getDataHealthReport<
     database
       .select()
       .from(ingestionRuns)
-      .where(gte(ingestionRuns.startedAt, start7d))
+      .where(gte(ingestionRuns.startedAt, runStart7d))
       .orderBy(desc(ingestionRuns.startedAt))
       .limit(500),
     database
@@ -244,7 +265,8 @@ export async function getDataHealthReport<
 
   const points7d = relevantCandleRows.length;
   const points24h = relevantCandleRows.filter(
-    (row) => row.openTime >= start24h && row.openTime < hourEnd,
+    (row) =>
+      row.openTime >= candleStart24h && row.openTime < candleHourEnd,
   ).length;
   const last24h = windowCoverage(candleMappings.length, 24, points24h);
   const last7d = windowCoverage(candleMappings.length, 7 * 24, points7d);
@@ -253,8 +275,8 @@ export async function getDataHealthReport<
     .map((mapping) => {
       let missing24h = 0;
       for (
-        let time = start24h.getTime();
-        time < hourEnd.getTime();
+        let time = candleStart24h.getTime();
+        time < candleHourEnd.getTime();
         time += HOUR_MS
       ) {
         if (
@@ -326,6 +348,23 @@ export async function getDataHealthReport<
   const quoteFreshnessRatio =
     quoteExpected === 0 ? 1 : Math.min(1, quoteFresh / quoteExpected);
 
+  const latestCandleDate = [...lastByAsset.values()].reduce<Date | null>(
+    (latest, value) =>
+      latest == null || value > latest ? value : latest,
+    null,
+  );
+  const latestQuoteDate = relevantQuoteRows.reduce<Date | null>(
+    (latest, quote) =>
+      latest == null || quote.observedAt > latest
+        ? quote.observedAt
+        : latest,
+    null,
+  );
+  const missingBucketCount = staleAssets.reduce(
+    (total, asset) => total + asset.missing24h,
+    0,
+  );
+
   const providerReports = LIVE_PROVIDERS.map((provider) => {
     const providerRuns = operationalRuns.filter(
       (run) => run.provider === provider,
@@ -335,11 +374,11 @@ export async function getDataHealthReport<
     );
     const failures24h = providerRuns.filter(
       (run) =>
-        run.startedAt >= start24h &&
+        run.startedAt >= runStart24h &&
         (run.status === "failed" || run.status === "partial"),
     ).length;
     const errors24h = providerRuns
-      .filter((run) => run.startedAt >= start24h)
+      .filter((run) => run.startedAt >= runStart24h)
       .map((run) => errorText(run.errorSummary))
       .join(" ");
     const lastSuccess = providerRuns.find(
@@ -407,6 +446,25 @@ export async function getDataHealthReport<
   return {
     generatedAt: now.toISOString(),
     status,
+    coverageAsOf: candleHourEnd.toISOString(),
+    latestCandleAt: iso(latestCandleDate),
+    candleLagHours:
+      latestCandleDate == null
+        ? null
+        : Math.max(
+            0,
+            (candleHourEnd.getTime() - latestCandleDate.getTime()) /
+              HOUR_MS,
+          ),
+    latestQuoteAt: iso(latestQuoteDate),
+    quoteLagMinutes:
+      latestQuoteDate == null
+        ? null
+        : Math.max(
+            0,
+            (now.getTime() - latestQuoteDate.getTime()) / 60_000,
+          ),
+    missingBucketCount,
     providers: providerReports,
     candleCoverage: { last24h, last7d },
     staleAssets: staleAssets.slice(0, 200),

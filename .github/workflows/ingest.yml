@@ -2,7 +2,10 @@ name: Market Data Ingestion
 
 on:
   schedule:
-    - cron: "7 * * * *"
+    # Keep a second attempt later in the hour so a delayed/dropped scheduled
+    # event can be recovered without introducing a paid scheduler.
+    - cron: "17 * * * *"
+    - cron: "47 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -15,7 +18,7 @@ concurrency:
 jobs:
   ingest:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
     env:
       DATABASE_URL: ${{ secrets.INGEST_DATABASE_URL }}
       COINGECKO_API_KEY: ${{ secrets.COINGECKO_API_KEY }}
@@ -31,4 +34,18 @@ jobs:
       - name: Apply database migrations
         run: npm run db:migrate
       - name: Ingest quotes, market caps, and closed 1h candles
-        run: npm run ingest-market-data
+        shell: bash
+        run: |
+          set +e
+          final_status=1
+          for attempt in 1 2 3; do
+            npm run ingest-market-data
+            final_status=$?
+            if [ "$final_status" -eq 0 ]; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              sleep $((attempt * 300))
+            fi
+          done
+          exit "$final_status"

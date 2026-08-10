@@ -20,6 +20,7 @@ import { getDataHealthReport } from "../lib/ingestion/data-health";
 import { createGateQuoteAdapter } from "../lib/ingestion/provider-adapters";
 import {
   runCandleIngestion,
+  runMarketIngestion,
   runQuoteIngestion,
 } from "../lib/ingestion/service";
 import type {
@@ -511,6 +512,72 @@ describe.sequential("P3 ingestion service", () => {
       true,
     );
   });
+
+  test(
+    "allows the latest closed candle bucket to settle before reporting a gap",
+    async () => {
+      const isolatedClient = new PGlite();
+      const isolatedDatabase = drizzle(isolatedClient, { schema });
+      const ingestionNow = new Date("2026-07-31T03:34:00.000Z");
+      const healthNow = new Date("2026-07-31T04:34:00.000Z");
+      try {
+        await migrate(isolatedDatabase, { migrationsFolder: "drizzle" });
+        await seedReferenceData(isolatedDatabase);
+
+        const results = await runMarketIngestion(
+          isolatedDatabase,
+          {
+            quotes: [
+              fakeQuoteAdapter("coingecko", {
+                observedAt: ingestionNow.toISOString(),
+                price: 100,
+                volume24h: 1,
+              }),
+              fakeQuoteAdapter("gate", {
+                observedAt: ingestionNow.toISOString(),
+                price: 100,
+                volume24h: 1,
+              }),
+              fakeQuoteAdapter("okx", {
+                observedAt: ingestionNow.toISOString(),
+                price: 100,
+                volume24h: 1,
+              }),
+            ],
+            candles: [fakeAdapter("gate"), fakeAdapter("okx")],
+          },
+          {
+            quotes: { now: ingestionNow },
+            candles: {
+              now: ingestionNow,
+              initialBackfillHours: 24,
+              repairLookbackHours: 24,
+              maxBackfillHours: 48,
+            },
+          },
+        );
+
+        expect(results.every((result) => result.status === "success")).toBe(
+          true,
+        );
+
+        const report = await getDataHealthReport(
+          isolatedDatabase,
+          healthNow,
+        );
+        expect(report.status).toBe("healthy");
+        expect(report.candleCoverage.last24h.coverageRatio).toBe(1);
+        expect(report.staleAssets).toEqual([]);
+        expect(report.coverageAsOf).toBe("2026-07-31T03:00:00.000Z");
+        expect(report.latestCandleAt).toBe("2026-07-31T02:00:00.000Z");
+        expect(report.candleLagHours).toBe(1);
+        expect(report.quoteLagMinutes).toBe(60);
+      } finally {
+        await isolatedClient.close();
+      }
+    },
+    30_000,
+  );
 
   test(
     "health excludes inactive/future rows and exposes stale quotes and stuck runs",
