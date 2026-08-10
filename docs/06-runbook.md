@@ -41,7 +41,9 @@ npm run data:health
 npm run db:import-legacy
 ```
 
-采集器会重试 429、5xx、网络错误和超时，并用数据库键抵抗重复投递。`partial`/`failed` 采集与 `degraded`/`critical` 健康状态返回非零退出码，但已经成功落库的资产不会回滚。
+采集器会重试 429、5xx、网络错误和超时，并用数据库键抵抗重复投递。GitHub Actions 的采集 workflow 在每小时 UTC `:17` 和 `:47` 各提供一次机会；同一小时重复任务会被 `ingestion_runs.dedupe_key` 安全跳过。每次 workflow 最多执行两次补偿重试，已经成功落库的资产不会回滚。
+
+健康 workflow 每天 `05:23 UTC` 执行，并在失败时最多等待两次重试。K 线健康窗口默认排除最新一个可能尚未完全落库的闭合小时；报价新鲜度仍按当前时间计算，超过 2 小时未更新会判定为 `critical`。报告中的 `coverageAsOf`、`latestCandleAt`、`candleLagHours`、`latestQuoteAt` 和 `missingBucketCount` 用于区分正常结算延迟与真实数据中断。
 
 需要一次性补 31 天小时历史时，在 PowerShell 中运行：
 
@@ -111,6 +113,9 @@ JSON 模式会完全绕过数据库，`DATA_DUAL_READ` 在该模式下自动失�
 ## 6. GitHub Actions 排错
 
 - `Market Data Ingestion` 只应有仓库读取权限，不应含 `git push` 或 Vercel 部署。
+- 采集 workflow 的正常调度点是每小时 UTC `:17` 和 `:47`；GitHub schedule 可能延迟，因此先看最近一次成功的 `ingestion_runs`，再判断是否需要手动补采。
+- `Data Health` 的 `healthy` 报告应包含 `missingBucketCount=0`；若只有最新闭合小时延迟，不应直接判定为 `critical`。
+- 手动恢复顺序：先运行 `Market Data Ingestion`，等待成功后再运行 `Data Health`；不要先降低告警阈值。
 - `DATABASE_URL is required`：检查 repository secret `INGEST_DATABASE_URL`。
 - CoinGecko 429：等待退避重试；持续发生时检查配额。
 - 单币失败：检查对应 `ingestion_runs`；其他资产应已落库且本次为 `partial`。

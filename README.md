@@ -58,7 +58,7 @@ Treemap、板块排名和 **24h / 3d / 7d / 30d** 同口径历史回答“谁强
 </p>
 
 1. Gate.io 与 OKX 提供 quote 和 `1h` K 线；CoinGecko 补充市值与末端 quote。
-2. GitHub Actions 每小时采集，处理限流重试、单资产隔离、幂等写入和游标补洞。
+2. GitHub Actions 在每小时 UTC `:17` 和 `:47` 设有采集机会，处理限流重试、单资产隔离、幂等写入和游标补洞；同一小时重复触发会由数据库 dedupe 安全跳过。
 3. PostgreSQL 保存规范资产注册表、latest quotes、小时 K 线与运行记录。
 4. Next.js 通过版本化 BFF 返回 board、candles、history 与健康状态；浏览器不直连交易所。
 5. 数据库读路径异常时可切换到只读 JSON；数据采集与网站部署彼此解耦。
@@ -67,7 +67,7 @@ Treemap、板块排名和 **24h / 3d / 7d / 30d** 同口径历史回答“谁强
 
 - P0～P5.1 已进入 GitHub `main` 和 Vercel Production。
 - 56 个规范资产、20 个别名、168 条 provider 状态和 14 个板块均通过注册表检查。
-- 当前质量门包含 16 个测试文件、99 项测试、lint、TypeScript、migration、依赖审计与 Production build。
+- 当前质量门包含 16 个测试文件、100 项测试、lint、TypeScript、migration、依赖审计与 Production build。
 - `/api/v1/board` 默认从 PostgreSQL 读取，并与最后一份有效 JSON 做可选双读比较。
 - `.github/workflows/ingest.yml` 每小时只写数据库；Production 通过独立的手动部署 workflow 发布。
 
@@ -166,8 +166,9 @@ tests/               契约、路由、指标、数据库、采集和市场脉�
 
 - **代码发布**：先让 `npm run check` 与 GitHub Quality workflow 通过，再手动运行
   `Deploy Production`；当前没有启用 Vercel Git 自动部署。
-- **数据刷新**：`.github/workflows/ingest.yml` 每小时只写 PostgreSQL，不提交快照、不触发部署。
-- **数据巡检**：`.github/workflows/data-health.yml` 检查覆盖率、新鲜度和失败运行。
+- **数据刷新**：`.github/workflows/ingest.yml` 在每小时 `:17`/`:47` UTC 尝试采集；每次失败最多重试两次，不提交快照、不触发部署。
+- **数据巡检**：`.github/workflows/data-health.yml` 每天 `05:23 UTC` 检查覆盖率、新鲜度和失败运行，并对临时失败做有限重试。
+- **健康口径**：K 线覆盖默认容忍最新一个闭合小时的落库延迟；报价超过两小时未更新仍会判定为 `critical` 并触发失败告警。
 
 Production：[crypto-sector-board.vercel.app](https://crypto-sector-board.vercel.app)
 
@@ -191,6 +192,7 @@ Production：[crypto-sector-board.vercel.app](https://crypto-sector-board.vercel
 - [P3 可靠采集](./docs/10-p3-reliable-ingestion.md)
 - [P4 BFF 与页面切换](./docs/11-p4-bff-and-page-cutover.md)
 - [P5.0/P5.1 市场脉搏实施计划](./docs/12-p5-market-pulse.md)
+- [数据采集与健康告警修复任务书](./docs/13-data-pipeline-alert-repair-taskbook.md)
 
 ## 许可证
 
