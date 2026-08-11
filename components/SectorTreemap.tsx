@@ -8,6 +8,11 @@ import { formatPct, formatMarketCap, getSectorReturn, getCoinReturn, sectorColor
 
 type ViewMode = "detailed" | "overview";
 
+// Keep the sector chrome compact so small sectors retain room for their coins.
+const SECTOR_HEADER_MIN_HEIGHT = 8;
+const SECTOR_HEADER_MAX_HEIGHT = 16;
+const SECTOR_HEADER_HEIGHT_RATIO = 0.14;
+
 interface Props {
   snapshot: DailySnapshot;
   width: number;
@@ -100,7 +105,19 @@ export default function SectorTreemap({
         return (b.value || 0) - (a.value || 0);
       });
 
-    return treemap<Datum>().size([width, height]).paddingOuter(8).paddingTop(24).paddingInner(2).round(true)(h);
+    return treemap<Datum>()
+      .size([width, height])
+      .paddingOuter(5)
+      .paddingTop((node) => {
+        if (node.depth !== 1) return 0;
+        const availableHeight = node.y1 - node.y0;
+        return Math.min(
+          SECTOR_HEADER_MAX_HEIGHT,
+          Math.max(SECTOR_HEADER_MIN_HEIGHT, availableHeight * SECTOR_HEADER_HEIGHT_RATIO),
+        );
+      })
+      .paddingInner(1)
+      .round(true)(h);
   }, [snapshot, width, height, period]);
 
   const sectorNodes = root.children || [];
@@ -115,6 +132,14 @@ export default function SectorTreemap({
           const sw = sectorNode.x1 - sectorNode.x0;
           const sh = sectorNode.y1 - sectorNode.y0;
           if (sw <= 0 || sh <= 0) return null;
+          const headerHeight = Math.min(
+            sh,
+            Math.min(
+              SECTOR_HEADER_MAX_HEIGHT,
+              Math.max(SECTOR_HEADER_MIN_HEIGHT, sh * SECTOR_HEADER_HEIGHT_RATIO),
+            ),
+          );
+          const showSectorLabel = sw >= 42 && headerHeight >= 10;
           const sectorDirectlyHighlighted =
             highlightedSectorIds?.has(sector.id) ?? false;
           const containsHighlightedAsset = sector.coins.some((coin) =>
@@ -189,25 +214,27 @@ export default function SectorTreemap({
                 x={sectorNode.x0}
                 y={sectorNode.y0}
                 width={sw}
-                height={24}
+                height={headerHeight}
                 fill={sectorColor}
                 clipPath={`url(#clip-${sector.id})`}
               />
-              <text
-                x={sectorNode.x0 + 8}
-                y={sectorNode.y0 + 16}
-                fontSize={sw < 100 ? 10 : sw < 140 ? 11 : 13}
-                fontWeight={600}
-                fill={sectorTextColor}
-              >
-                {sig ? (sw < 80 ? sig.icon : `${sig.icon} ${sector.name}`) : sector.name}
-              </text>
-              {sw >= 70 && (
+              {showSectorLabel && (
+                <text
+                  x={sectorNode.x0 + 6}
+                  y={sectorNode.y0 + headerHeight * 0.68}
+                  fontSize={sw < 100 ? 9 : sw < 140 ? 10 : 12}
+                  fontWeight={600}
+                  fill={sectorTextColor}
+                >
+                  {sig ? (sw < 80 ? sig.icon : `${sig.icon} ${sector.name}`) : sector.name}
+                </text>
+              )}
+              {sw >= 70 && headerHeight >= 11 && (
                 <text
                   x={sectorNode.x0 + sw - 8}
-                  y={sectorNode.y0 + 16}
+                  y={sectorNode.y0 + headerHeight * 0.68}
                   textAnchor="end"
-                  fontSize={sw < 110 ? 10 : 13}
+                  fontSize={sw < 110 ? 9 : 12}
                   fontWeight={700}
                   fill={sectorTextColor}
                   style={{ fontVariantNumeric: "tabular-nums" }}
