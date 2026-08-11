@@ -68,9 +68,10 @@ export default function SectorTreemap({
   const root = useMemo(() => {
     const coinWeight = (marketCap: number | null, assetId: string) => {
       const safe = Math.max(marketCap ?? 0, 1);
-      // Use a softer exponent for BTC so one asset does not crowd out the
-      // smaller regions. This changes only visual area, never metrics.
-      const exponent = assetId === "bitcoin" ? 0.3 : 0.4;
+      // Use a slightly softer exponent for BTC so one asset does not crowd
+      // out smaller regions while remaining clearly visible and clickable.
+      // This changes only visual area, never metrics.
+      const exponent = assetId === "bitcoin" ? 0.35 : 0.4;
       return Math.pow(safe, exponent) + 800;
     };
 
