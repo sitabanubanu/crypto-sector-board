@@ -196,6 +196,7 @@ Production：[crypto-sector-board.vercel.app](https://crypto-sector-board.vercel
 - [P5.0/P5.1 市场脉搏实施计划](./docs/12-p5-market-pulse.md)
 - [数据采集与健康告警修复任务书](./docs/13-data-pipeline-alert-repair-taskbook.md)
 - [P6 优先资产与板块研究档案](./docs/14-p6-priority-assets-and-insights.md)
+- [67 个资产质量研究与证据边界](./docs/15-asset-quality-research.md)
 
 ## 许可证
 

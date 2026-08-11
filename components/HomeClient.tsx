@@ -31,7 +31,11 @@ import { detectAllSignals } from "@/lib/signals";
 import { buildCorrelationMatrix } from "@/lib/correlation";
 import { buildMarketPulse, searchMarket, type MarketSearchResult } from "@/lib/market-pulse";
 import type { PeriodType, WatchlistConfig, CustomSectorConfig, CoinSnapshot } from "@/lib/types";
-import { getAssetInsight, getSectorInsight } from "@/lib/market-insights";
+import {
+  getAssetInsight,
+  getAssetQualityResearch,
+  getSectorInsight,
+} from "@/lib/market-insights";
 import type { BoardResponse } from "@/lib/market-data/bff-contracts";
 
 interface Props {
@@ -447,6 +451,7 @@ export default function HomeClient({ initialBoard }: Props) {
           sectorName={selectedCoin.sectorName}
           sector={coinSector}
           insight={getAssetInsight(selectedCoin.coin.id)}
+          qualityResearch={getAssetQualityResearch(selectedCoin.coin.id)}
           closes={closesByAssetId.get(selectedCoin.coin.id)}
           onClose={() => setSelectedCoin(null)}
         />

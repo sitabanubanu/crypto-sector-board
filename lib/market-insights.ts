@@ -1,6 +1,7 @@
 import { z } from "zod";
 import sectorInsightsData from "@/data/sector-insights.json";
 import assetInsightsData from "@/data/asset-insights.json";
+import assetQualityResearchData from "@/data/asset-quality-research.json";
 
 const SourceUrlSchema = z.string().url();
 
@@ -56,9 +57,75 @@ export const AssetInsightsFileSchema = z
   })
   .strict();
 
+const QualityConfidenceSchema = z.enum(["high", "medium", "low"]);
+
+export const AssetQualityMarketSchema = z
+  .object({
+    segment: z.string().min(1),
+    addressableNeed: z.string().min(1),
+    scaleIndicators: z.array(z.string().min(1)).min(1),
+    scaleCaveat: z.string().min(1),
+  })
+  .strict();
+
+export const AssetQualityEconomicsSchema = z
+  .object({
+    entityType: z.string().min(1),
+    profitabilityStatus: z.enum([
+      "not_applicable",
+      "not_disclosed",
+      "revenue_generating_not_profit_proven",
+    ]),
+    evidence: z.string().min(1),
+    confidence: QualityConfidenceSchema,
+  })
+  .strict();
+
+export const AssetQualitySignalsSchema = z
+  .object({
+    demandEvidence: z.enum(["high", "medium", "low", "speculative"]),
+    maturity: z.enum(["mature", "operating", "early", "unclear"]),
+    securityEvidence: z.enum(["strong", "medium", "limited"]),
+    decentralization: z.enum(["high", "medium", "low", "unknown"]),
+    tokenCapture: z.enum(["direct", "indirect", "weak", "unknown", "none"]),
+    supplyRisk: z.enum(["low", "medium", "high"]),
+    confidence: QualityConfidenceSchema,
+  })
+  .strict();
+
+export const AssetQualityResearchSchema = z
+  .object({
+    assetId: z.string().min(1),
+    problemSolved: z.string().min(1),
+    market: AssetQualityMarketSchema,
+    economics: AssetQualityEconomicsSchema,
+    quality: AssetQualitySignalsSchema,
+    sources: z.array(SourceUrlSchema).min(1),
+  })
+  .strict();
+
+export const AssetQualityResearchFileSchema = z
+  .object({
+    version: z.literal(1),
+    reviewedAt: z.string().date(),
+    methodology: z
+      .object({
+        marketSize: z.string().min(1),
+        profitability: z.string().min(1),
+        quality: z.string().min(1),
+      })
+      .strict(),
+    assets: z.array(AssetQualityResearchSchema).min(1),
+  })
+  .strict();
+
 export type MarketSizeInsight = z.infer<typeof MarketSizeInsightSchema>;
 export type SectorInsight = z.infer<typeof SectorInsightSchema>;
 export type AssetInsight = z.infer<typeof AssetInsightSchema>;
+export type AssetQualityMarket = z.infer<typeof AssetQualityMarketSchema>;
+export type AssetQualityEconomics = z.infer<typeof AssetQualityEconomicsSchema>;
+export type AssetQualitySignals = z.infer<typeof AssetQualitySignalsSchema>;
+export type AssetQualityResearch = z.infer<typeof AssetQualityResearchSchema>;
 
 export const sectorInsightsFile = SectorInsightsFileSchema.parse(
   sectorInsightsData,
@@ -66,12 +133,18 @@ export const sectorInsightsFile = SectorInsightsFileSchema.parse(
 export const assetInsightsFile = AssetInsightsFileSchema.parse(
   assetInsightsData,
 );
+export const assetQualityResearchFile = AssetQualityResearchFileSchema.parse(
+  assetQualityResearchData,
+);
 
 const sectorInsightsById = new Map(
   sectorInsightsFile.sectors.map((insight) => [insight.sectorId, insight]),
 );
 const assetInsightsById = new Map(
   assetInsightsFile.assets.map((insight) => [insight.assetId, insight]),
+);
+const assetQualityResearchById = new Map(
+  assetQualityResearchFile.assets.map((research) => [research.assetId, research]),
 );
 
 export function getSectorInsight(sectorId: string): SectorInsight {
@@ -112,4 +185,35 @@ export function getAssetInsight(assetId: string): AssetInsight {
 
 export function hasCuratedAssetInsight(assetId: string): boolean {
   return assetInsightsById.has(assetId);
+}
+
+export function getAssetQualityResearch(assetId: string): AssetQualityResearch {
+  return (
+    assetQualityResearchById.get(assetId) ?? {
+      assetId,
+      problemSolved: "该资产尚未建立完整的公开资料研究档案。",
+      market: {
+        segment: "待分类",
+        addressableNeed: "需要结合项目官方资料、链上使用和市场数据进一步判断。",
+        scaleIndicators: ["实时市值", "24h 成交额"],
+        scaleCaveat: "代理指标不等于真实用户人数、总可寻址市场或项目收入。",
+      },
+      economics: {
+        entityType: "unknown",
+        profitabilityStatus: "not_disclosed",
+        evidence: "没有足够的公开、可核验损益表，不能判断项目方是否盈利。",
+        confidence: "low",
+      },
+      quality: {
+        demandEvidence: "low",
+        maturity: "unclear",
+        securityEvidence: "limited",
+        decentralization: "unknown",
+        tokenCapture: "unknown",
+        supplyRisk: "high",
+        confidence: "low",
+      },
+      sources: ["https://www.coingecko.com/"],
+    }
+  );
 }

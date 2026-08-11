@@ -1,0 +1,547 @@
+{
+  "version": 1,
+  "reviewedAt": "2026-08-11",
+  "methodology": {
+    "marketSize": "市场规模分为可观察资产规模和可寻址需求市场。资产市值、24h成交额、TVL、协议费用是代理指标，不等于真实用户人数或项目收入。",
+    "profitability": "只有公开、可核验的项目实体损益表才能标记为盈利。协议手续费或金库余额只能说明收入/资金流，不足以证明净利润。",
+    "quality": "质量指标使用需求证据、产品成熟度、安全证据、去中心化、代币价值捕获和供应风险；它们是研究标签，不是投资评级。"
+  },
+  "assets": [
+    {
+      "assetId": "bitcoin",
+      "problemSolved": "在没有中央发行方和清算机构的情况下提供稀缺、可验证、抗审查的数字结算资产。",
+      "market": {"segment":"货币网络/数字储值","addressableNeed":"全球储值、跨境结算和抗审查支付","scaleIndicators":["资产市值","24h现货成交额","链上转账与矿工费用"],"scaleCaveat":"没有统一的 BTC 总可寻址市场口径；看板实时市值和成交额只代表可观察规模。"},
+      "economics": {"entityType":"permissionless_network","profitabilityStatus":"not_applicable","evidence":"没有单一项目方 P&L；矿工获得区块奖励和手续费是网络安全激励，不是项目公司利润。","confidence":"high"},
+      "quality": {"demandEvidence":"high","maturity":"mature","securityEvidence":"strong","decentralization":"high","tokenCapture":"direct","supplyRisk":"low","confidence":"high"},
+      "sources":["https://bitcoin.org/en/","https://www.coingecko.com/en/coins/bitcoin"]
+    },
+    {
+      "assetId": "ethereum",
+      "problemSolved": "提供通用智能合约和可组合应用的公共结算层，减少对单一平台和中介的依赖。",
+      "market": {"segment":"智能合约结算层","addressableNeed":"全球数字资产、金融、应用和数据结算","scaleIndicators":["资产市值","链上费用与交易量","DeFi/NFT/稳定币 TVL"],"scaleCaveat":"链上活动是需求代理，不能直接等同项目方收入或独立用户数。"},
+      "economics": {"entityType":"permissionless_network","profitabilityStatus":"not_applicable","evidence":"网络费用、质押奖励和销毁机制不构成单一项目公司的净利润；以太坊生态基金会也不代表整个网络 P&L。","confidence":"high"},
+      "quality": {"demandEvidence":"high","maturity":"mature","securityEvidence":"strong","decentralization":"high","tokenCapture":"direct","supplyRisk":"medium","confidence":"high"},
+      "sources":["https://ethereum.org/en/","https://docs.coingecko.com/reference/coins-markets"]
+    },
+    {
+      "assetId": "solana",
+      "problemSolved": "以高吞吐和低延迟提供面向消费者和金融应用的公共链执行环境。",
+      "market": {"segment":"高性能智能合约公链","addressableNeed":"消费级应用、交易和高频链上交互","scaleIndicators":["资产市值","链上交易/费用","生态 TVL 和稳定币余额"],"scaleCaveat":"交易数量可能包含机器人和系统调用，不能直接换算真实用户。"},
+      "economics": {"entityType":"foundation_network","profitabilityStatus":"not_disclosed","evidence":"Solana Foundation、Solana Labs 与网络本身不是同一财务主体，公开资料不足以证明项目方净利润。","confidence":"medium"},
+      "quality": {"demandEvidence":"high","maturity":"operating","securityEvidence":"medium","decentralization":"medium","tokenCapture":"direct","supplyRisk":"medium","confidence":"medium"},
+      "sources":["https://solana.com/docs","https://www.coingecko.com/en/coins/solana"]
+    },
+    {
+      "assetId": "binancecoin",
+      "problemSolved": "为 Binance 交易和 BNB Chain 生态提供费用、质押、治理与激励媒介。",
+      "market": {"segment":"交易所/公链生态代币","addressableNeed":"中心化交易、链上应用和交易费用结算","scaleIndicators":["资产市值","交易所与链上成交额","BNB Chain TVL/稳定币余额"],"scaleCaveat":"BNB 需求与 Binance 商业生态相关，但交易所公司收入不能直接归属于代币持有人。"},
+      "economics": {"entityType":"company_ecosystem","profitabilityStatus":"not_disclosed","evidence":"Binance 是相关商业主体，但其公司利润、代币价值捕获和 BNB 经济不能混为一谈；公开燃烧不等于项目方净利润。","confidence":"medium"},
+      "quality": {"demandEvidence":"high","maturity":"mature","securityEvidence":"medium","decentralization":"low","tokenCapture":"direct","supplyRisk":"medium","confidence":"medium"},
+      "sources":["https://www.bnbchain.org/en/what-is-bnb","https://www.coingecko.com/en/coins/bnb"]
+    },
+    {
+      "assetId": "ripple",
+      "problemSolved": "为跨境支付和资产转移提供快速、低成本的公共账本结算。",
+      "market": {"segment":"支付/跨境结算网络","addressableNeed":"银行、支付机构和个人的跨境转账与流动性调度","scaleIndicators":["资产市值","交易量与活跃账户","Ripple/机构支付产品采用情况"],"scaleCaveat":"Ripple 公司商业收入不能直接视为 XRP 网络或 XRP 持有人的收入。"},
+      "economics": {"entityType":"private_company_network","profitabilityStatus":"not_disclosed","evidence":"Ripple 是私营公司，公开公司财报不足以建立 XRP 项目方可审计的净利润结论。","confidence":"medium"},
+      "quality": {"demandEvidence":"medium","maturity":"mature","securityEvidence":"strong","decentralization":"medium","tokenCapture":"weak","supplyRisk":"high","confidence":"medium"},
+      "sources":["https://xrpl.org/docs","https://www.coingecko.com/en/coins/xrp"]
+    },
+    {
+      "assetId": "cardano",
+      "problemSolved": "以形式化方法、权益证明和治理机制提供可扩展的智能合约公链。",
+      "market": {"segment":"智能合约公链","addressableNeed":"金融、身份、资产发行和公共应用结算","scaleIndicators":["资产市值","交易/费用和活跃地址","生态 TVL 与稳定币"],"scaleCaveat":"生态 TVL 和账户数是采用代理，不是项目方营收。"},
+      "economics": {"entityType":"foundation_ecosystem","profitabilityStatus":"not_disclosed","evidence":"Cardano Foundation、Input Output 与网络治理资金主体不同，未发现统一公开 P&L 可证明项目方盈利。","confidence":"medium"},
+      "quality": {"demandEvidence":"medium","maturity":"operating","securityEvidence":"strong","decentralization":"medium","tokenCapture":"direct","supplyRisk":"medium","confidence":"medium"},
+      "sources":["https://docs.cardano.org/","https://www.coingecko.com/en/coins/cardano"]
+    },
+    {
+      "assetId": "avalanche-2",
+      "problemSolved": "通过可定制子网和快速最终性支持多种应用链和金融应用。",
+      "market": {"segment":"应用链/L1基础设施","addressableNeed":"企业、游戏、金融和专用区块链部署","scaleIndicators":["资产市值","链上交易/费用","子网数量、TVL 和稳定币"],"scaleCaveat":"Ava Labs 商业活动、基金会资金和 Avalanche 网络使用量需分开观察。"},
+      "economics": {"entityType":"private_company_foundation","profitabilityStatus":"not_disclosed","evidence":"Ava Labs 与 Avalanche Foundation 的公开融资或生态资金不等于公司净利润；缺少统一公开损益表。","confidence":"medium"},
+      "quality": {"demandEvidence":"medium","maturity":"operating","securityEvidence":"medium","decentralization":"medium","tokenCapture":"direct","supplyRisk":"medium","confidence":"medium"},
+      "sources":["https://build.avax.network/docs","https://www.coingecko.com/en/coins/avalanche-2"]
+    },
+    {
+      "assetId": "tron",
+      "problemSolved": "提供低费用、高吞吐的转账和智能合约网络，尤其服务稳定币支付场景。",
+      "market": {"segment":"支付/智能合约公链","addressableNeed":"稳定币转账、内容和链上应用","scaleIndicators":["资产市值","稳定币转账量","交易费用和活跃地址"],"scaleCaveat":"链上费用和地址数不能直接等于项目方净收入或独立用户。"},
+      "economics": {"entityType":"foundation_network","profitabilityStatus":"not_disclosed","evidence":"TRON DAO/基金会与网络费用、代币持有人不是同一财务主体，缺少公开 P&L。","confidence":"medium"},
+      "quality": {"demandEvidence":"high","maturity":"mature","securityEvidence":"medium","decentralization":"low","tokenCapture":"direct","supplyRisk":"medium","confidence":"medium"},
+      "sources":["https://developers.tron.network/","https://www.coingecko.com/en/coins/tron"]
+    },
+    {
+      "assetId": "the-open-network",
+      "problemSolved": "将快速、低成本区块链能力与 Telegram 等消费级分发场景连接。",
+      "market": {"segment":"消费级公链/支付生态","addressableNeed":"社交应用、支付、游戏和数字资产服务","scaleIndicators":["资产市值","链上活跃账户和交易量","Telegram Mini Apps/生态应用"],"scaleCaveat":"Telegram 用户规模不能直接等于 TON 用户或代币需求。"},
+      "economics": {"entityType":"foundation_ecosystem","profitabilityStatus":"not_disclosed","evidence":"TON Foundation、生态项目和 Telegram 商业主体的财务边界不同，未发现统一可审计 P&L。","confidence":"medium"},
+      "quality": {"demandEvidence":"medium","maturity":"operating","securityEvidence":"medium","decentralization":"medium","tokenCapture":"direct","supplyRisk":"medium","confidence":"medium"},
+      "sources":["https://docs.ton.org/","https://www.coingecko.com/en/coins/toncoin"]
+    },
+    {
+      "assetId": "polkadot",
+      "problemSolved": "通过共享安全和跨链消息让不同应用链互操作。",
+      "market": {"segment":"互操作/应用链基础设施","addressableNeed":"跨链资产、消息和主权应用链部署","scaleIndicators":["资产市值","跨链消息量","平行链/系统链活动和生态 TVL"],"scaleCaveat":"跨链消息与生态应用规模不能直接等同 DOT 代币捕获。"},
+      "economics": {"entityType":"dao_foundation","profitabilityStatus":"not_disclosed","evidence":"Web3 Foundation、Polkadot Treasury 和网络本身有不同账目；资金余额或支出不构成项目方净利润。","confidence":"medium"},
+      "quality": {"demandEvidence":"medium","maturity":"operating","securityEvidence":"strong","decentralization":"high","tokenCapture":"direct","supplyRisk":"medium","confidence":"medium"},
+      "sources":["https://wiki.polkadot.com/","https://www.coingecko.com/en/coins/polkadot"]
+    },
+    {
+      "assetId": "sui",
+      "problemSolved": "以对象模型和并行执行改善高频资产与应用的链上体验。",
+      "market": {"segment":"高性能智能合约公链","addressableNeed":"游戏、消费应用、金融和资产发行","scaleIndicators":["资产市值","交易/费用和活跃地址","生态 TVL、稳定币和应用数量"],"scaleCaveat":"Mysten Labs 公司商业状况不能直接代表 Sui 网络盈利。"},
+      "economics": {"entityType":"private_company_foundation","profitabilityStatus":"not_disclosed","evidence":"Mysten Labs 为私营主体，未见可核验的公开项目级净利润披露。","confidence":"medium"},
+      "quality": {"demandEvidence":"medium","maturity":"operating","securityEvidence":"medium","decentralization":"medium","tokenCapture":"direct","supplyRisk":"high","confidence":"medium"},
+      "sources":["https://docs.sui.io/","https://www.coingecko.com/en/coins/sui"]
+    },
+    {
+      "assetId": "aptos",
+      "problemSolved": "以 Move 语言和并行执行提供面向应用的高性能公链。",
+      "market": {"segment":"高性能智能合约公链","addressableNeed":"金融、游戏、消费应用和资产发行","scaleIndicators":["资产市值","交易/费用和活跃地址","TVL、稳定币和开发者活动"],"scaleCaveat":"Aptos Labs 融资和公司财务不能直接视为 APT 网络利润。"},
+      "economics": {"entityType":"private_company_foundation","profitabilityStatus":"not_disclosed","evidence":"Aptos Labs 为私营主体，公开融资不等于项目盈利，未见统一公开 P&L。","confidence":"medium"},
+      "quality": {"demandEvidence":"medium","maturity":"operating","securityEvidence":"medium","decentralization":"medium","tokenCapture":"direct","supplyRisk":"high","confidence":"medium"},
+      "sources":["https://aptos.dev/","https://www.coingecko.com/en/coins/aptos"]
+    },
+    {
+      "assetId": "near",
+      "problemSolved": "通过分片和开发者友好工具降低公链应用的扩展与使用门槛。",
+      "market": {"segment":"分片智能合约公链","addressableNeed":"应用、账户抽象、跨链和 AI/消费场景","scaleIndicators":["资产市值","链上交易/活跃账户","生态 TVL、稳定币和开发者活动"],"scaleCaveat":"基金会资金、公司活动和网络费用需分开核算。"},
+      "economics": {"entityType":"foundation_ecosystem","profitabilityStatus":"not_disclosed","evidence":"NEAR Foundation 与生态公司没有公开统一损益表，不能仅凭代币或金库判断盈利。","confidence":"medium"},
+      "quality": {"demandEvidence":"medium","maturity":"operating","securityEvidence":"medium","decentralization":"medium","tokenCapture":"direct","supplyRisk":"medium","confidence":"medium"},
+      "sources":["https://docs.near.org/","https://www.coingecko.com/en/coins/near"]
+    },
+    {
+      "assetId": "arbitrum",
+      "problemSolved": "用 Ethereum L2 的批量结算降低交易成本并扩大智能合约吞吐。",
+      "market": {"segment":"Ethereum L2","addressableNeed":"以太坊扩容、DeFi、游戏和应用链","scaleIndicators":["资产市值","L2 日交易与活跃地址","TVL、排序器费用和桥接余额"],"scaleCaveat":"排序器毛收入不等于 DAO 净利润，还要扣除 Ethereum 数据发布成本。"},
+      "economics": {"entityType":"dao_protocol","profitabilityStatus":"revenue_generating_not_profit_proven","evidence":"L2 排序器费用可观察，但 DAO 的净收入、成本、代币价值捕获和长期预算需分开核验。","confidence":"medium"},
+      "quality": {"demandEvidence":"high","maturity":"mature","securityEvidence":"medium","decentralization":"medium","tokenCapture":"weak","supplyRisk":"high","confidence":"medium"},
+      "sources":["https://docs.arbitrum.io/","https://defillama.com/protocol/arbitrum","https://www.coingecko.com/en/coins/arbitrum"]
+    },
+    {
+      "assetId": "optimism",
+      "problemSolved": "用 OP Stack 和 Ethereum L2 扩展降低应用执行成本。",
+      "market": {"segment":"Ethereum L2/模块化栈","addressableNeed":"以太坊扩容和可部署的 Rollup 网络","scaleIndicators":["资产市值","L2 交易与活跃地址","排序器费用、数据成本和生态 TVL"],"scaleCaveat":"Superchain 生态规模与 OP 代币持有人收入不是同一概念。"},
+      "economics": {"entityType":"dao_protocol","profitabilityStatus":"revenue_generating_not_profit_proven","evidence":"排序器费用和链上活动可观察，但 OP Collective 的成本、激励和净利润未形成公开企业 P&L。","confidence":"medium"},
+      "quality": {"demandEvidence":"high","maturity":"mature","securityEvidence":"medium","decentralization":"medium","tokenCapture":"weak","supplyRisk":"high","confidence":"medium"},
+      "sources":["https://docs.optimism.io/","https://defillama.com/protocol/optimism","https://www.coingecko.com/en/coins/optimism"]
+    },
+    {
+      "assetId": "starknet",
+      "problemSolved": "用 ZK-Rollup 提高 Ethereum 应用的吞吐并降低验证成本。",
+      "market": {"segment":"ZK L2","addressableNeed":"隐私/可验证计算和 Ethereum 扩容","scaleIndicators":["资产市值","L2 交易和活跃账户","TVL、证明成本和排序器费用"],"scaleCaveat":"技术性能不等于经济规模，StarkWare 公司财务与 STRK DAO 需分开。"},
+      "economics": {"entityType":"private_company_dao","profitabilityStatus":"not_disclosed","evidence":"StarkWare 私营公司与 Starknet DAO 账目不同，公开融资和代币分配不能证明净利润。","confidence":"medium"},
+      "quality": {"demandEvidence":"medium","maturity":"operating","securityEvidence":"medium","decentralization":"low","tokenCapture":"weak","supplyRisk":"high","confidence":"medium"},
+      "sources":["https://docs.starknet.io/","https://www.coingecko.com/en/coins/starknet"]
+    },
+    {
+      "assetId": "mantle",
+      "problemSolved": "提供低成本 L2 执行环境，并把生态金库与应用激励结合。",
+      "market": {"segment":"Ethereum L2","addressableNeed":"扩容、收益、游戏和生态应用","scaleIndicators":["资产市值","L2 交易/活跃地址","TVL、排序器费用和生态金库"],"scaleCaveat":"生态激励和金库资产不等于持续经营利润。"},
+      "economics": {"entityType":"dao_protocol","profitabilityStatus":"revenue_generating_not_profit_proven","evidence":"L2 费用和生态金库可观察，但成本、激励和净利润未公开审计。","confidence":"low"},
+      "quality": {"demandEvidence":"medium","maturity":"operating","securityEvidence":"medium","decentralization":"low","tokenCapture":"indirect","supplyRisk":"high","confidence":"low"},
+      "sources":["https://docs.mantle.xyz/","https://www.coingecko.com/en/coins/mantle"]
+    },
+    {
+      "assetId": "conflux-token",
+      "problemSolved": "以树图共识和低成本执行支持开放网络、支付与资产发行。",
+      "market": {"segment":"L1/资产发行","addressableNeed":"支付、数字资产和区域生态应用","scaleIndicators":["资产市值","交易/活跃地址","稳定币和应用 TVL"],"scaleCaveat":"区域采用和基金会活动不等于公开项目盈利。"},
+      "economics": {"entityType":"foundation_ecosystem","profitabilityStatus":"not_disclosed","evidence":"Conflux Foundation 与生态公司未公开统一 P&L。","confidence":"low"},
+      "quality": {"demandEvidence":"low","maturity":"operating","securityEvidence":"medium","decentralization":"medium","tokenCapture":"direct","supplyRisk":"medium","confidence":"low"},
+      "sources":["https://doc.confluxnetwork.org/","https://www.coingecko.com/en/coins/conflux-token"]
+    },
+    {
+      "assetId": "litecoin",
+      "problemSolved": "提供简单、开放、低门槛的点对点支付网络。",
+      "market": {"segment":"支付/货币网络","addressableNeed":"小额支付、跨境转账和数字储值","scaleIndicators":["资产市值","交易量与活跃地址","矿工费用和支付使用"],"scaleCaveat":"没有统一项目方；矿工收入不是公司净利润。"},
+      "economics": {"entityType":"permissionless_network","profitabilityStatus":"not_applicable","evidence":"Litecoin 没有单一运营公司，矿工费用和区块奖励属于网络激励。","confidence":"high"},
+      "quality": {"demandEvidence":"medium","maturity":"mature","securityEvidence":"strong","decentralization":"high","tokenCapture":"direct","supplyRisk":"low","confidence":"high"},
+      "sources":["https://litecoin.org/","https://www.coingecko.com/en/coins/litecoin"]
+    },
+    {
+      "assetId": "bitcoin-cash",
+      "problemSolved": "围绕更大区块和低费用设计点对点电子现金网络。",
+      "market": {"segment":"支付/货币网络","addressableNeed":"点对点支付和跨境小额结算","scaleIndicators":["资产市值","支付交易和活跃地址","矿工费用"],"scaleCaveat":"网络使用与项目方盈利不存在单一可审计主体。"},
+      "economics": {"entityType":"permissionless_network","profitabilityStatus":"not_applicable","evidence":"没有单一 BCH 项目公司；矿工收益是安全激励。","confidence":"high"},
+      "quality": {"demandEvidence":"low","maturity":"mature","securityEvidence":"strong","decentralization":"high","tokenCapture":"direct","supplyRisk":"low","confidence":"medium"},
+      "sources":["https://bitcoincash.org/","https://www.coingecko.com/en/coins/bitcoin-cash"]
+    },
+    {
+      "assetId": "ethereum-classic",
+      "problemSolved": "保持不可逆历史和 PoW 安全模型的 EVM 公链。",
+      "market": {"segment":"PoW/EVM 公链","addressableNeed":"抗审查结算和兼容 Ethereum 的应用执行","scaleIndicators":["资产市值","交易/活跃地址","矿工收入和算力"],"scaleCaveat":"较小的应用生态和安全预算需要与主流 EVM 链分开评估。"},
+      "economics": {"entityType":"permissionless_network","profitabilityStatus":"not_applicable","evidence":"无单一项目方 P&L；矿工收入不是项目公司利润。","confidence":"high"},
+      "quality": {"demandEvidence":"low","maturity":"mature","securityEvidence":"medium","decentralization":"high","tokenCapture":"direct","supplyRisk":"low","confidence":"medium"},
+      "sources":["https://ethereumclassic.org/","https://www.coingecko.com/en/coins/ethereum-classic"]
+    },
+    {
+      "assetId": "aave",
+      "problemSolved": "提供非托管借贷和利率市场，让用户无需银行即可抵押、借入和出借资产。",
+      "market": {"segment":"DeFi 借贷","addressableNeed":"全球抵押借贷、资金效率和链上信用市场","scaleIndicators":["协议 TVL","借款余额与利用率","协议费用/收入和活跃借贷地址"],"scaleCaveat":"TVL、费用和收入需要扣除供应端利息与激励，不能直接称净利润。"},
+      "economics": {"entityType":"dao_protocol","profitabilityStatus":"revenue_generating_not_profit_proven","evidence":"Aave V3 有公开费用和部分收入归集到 Collector/Treasury 的数据；协议收入不等于 Aave Labs 或 DAO 净利润。","confidence":"high"},
+      "quality": {"demandEvidence":"high","maturity":"mature","securityEvidence":"strong","decentralization":"medium","tokenCapture":"direct","supplyRisk":"medium","confidence":"high"},
+      "sources":["https://aave.com/docs","https://defillama.com/protocol/aave-v3","https://www.coingecko.com/en/coins/aave"]
+    },
+    {
+      "assetId": "uniswap",
+      "problemSolved": "用无需许可的自动做市和流动性池提供链上资产交换。",
+      "market": {"segment":"DeFi DEX/自动做市","addressableNeed":"现货交换、做市和无需许可的流动性","scaleIndicators":["DEX 成交量","TVL 和流动性深度","协议费用与活跃交易地址"],"scaleCaveat":"前端、LP、协议和治理金库的费用分配不同，不能把 DEX 交易量当项目利润。"},
+      "economics": {"entityType":"dao_protocol_company","profitabilityStatus":"revenue_generating_not_profit_proven","evidence":"Uniswap 产生可观测交易费用，但协议费开关、LP 分成和 Uniswap Labs 公司财务需要分开，不能直接证明净利润。","confidence":"high"},
+      "quality": {"demandEvidence":"high","maturity":"mature","securityEvidence":"strong","decentralization":"medium","tokenCapture":"weak","supplyRisk":"medium","confidence":"high"},
+      "sources":["https://docs.uniswap.org/","https://defillama.com/protocol/uniswap-v3","https://www.coingecko.com/en/coins/uniswap"]
+    },
+    {
+      "assetId": "compound-governance-token",
+      "problemSolved": "提供算法化、非托管的借贷市场和利率发现。",
+      "market": {"segment":"DeFi 借贷","addressableNeed":"抵押借贷、资金效率和链上信用","scaleIndicators":["TVL/借款余额","利用率与清算量","协议费用和活跃地址"],"scaleCaveat":"协议费用与治理代币价值捕获不一定相同。"},
+      "economics": {"entityType":"dao_protocol_company","profitabilityStatus":"revenue_generating_not_profit_proven","evidence":"Compound 市场有借贷利息和协议储备，但 Compound Labs 公司和 DAO 的净利润没有统一公开 P&L。","confidence":"medium"},
+      "quality": {"demandEvidence":"medium","maturity":"mature","securityEvidence":"medium","decentralization":"medium","tokenCapture":"indirect","supplyRisk":"medium","confidence":"medium"},
+      "sources":["https://docs.compound.finance/","https://defillama.com/protocol/compound-v3","https://www.coingecko.com/en/coins/compound-governance-token"]
+    },
+    {
+      "assetId": "curve-dao-token",
+      "problemSolved": "针对稳定币和相关资产提供低滑点兑换与流动性治理。",
+      "market": {"segment":"稳定币 DEX/流动性","addressableNeed":"稳定币交换、外汇式交易和链上做市","scaleIndicators":["DEX 成交量","TVL 和池子深度","协议费用、CRV 锁仓和活跃地址"],"scaleCaveat":"费用、LP 收益、排放和治理金库必须拆开。"},
+      "economics": {"entityType":"dao_protocol","profitabilityStatus":"revenue_generating_not_profit_proven","evidence":"Curve 有公开交易费用和借贷产品费用，但 DAO 净利润和代币持有人现金流不能仅由总费用推出。","confidence":"high"},
+      "quality": {"demandEvidence":"high","maturity":"mature","securityEvidence":"medium","decentralization":"medium","tokenCapture":"indirect","supplyRisk":"high","confidence":"medium"},
+      "sources":["https://resources.curve.finance/","https://defillama.com/protocol/curve-dex","https://www.coingecko.com/en/coins/curve-dao-token"]
+    },
+    {
+      "assetId": "lido-dao",
+      "problemSolved": "把质押资产转化为可组合的流动性质押凭证。",
+      "market": {"segment":"流动性质押","addressableNeed":"PoS 质押、流动性和 DeFi 资金效率","scaleIndicators":["质押 TVL","stETH 供应与收益","协议费用和节点运营收入"],"scaleCaveat":"质押奖励大部分属于用户和节点，Lido 协议费不是净利润。"},
+      "economics": {"entityType":"dao_protocol","profitabilityStatus":"revenue_generating_not_profit_proven","evidence":"Lido 有可观测协议费和 DAO 金库收入，但节点、保险、开发和治理支出后是否净盈利需另行审计。","confidence":"high"},
+      "quality": {"demandEvidence":"high","maturity":"mature","securityEvidence":"strong","decentralization":"medium","tokenCapture":"indirect","supplyRisk":"medium","confidence":"high"},
+      "sources":["https://docs.lido.fi/","https://defillama.com/protocol/lido","https://www.coingecko.com/en/coins/lido-dao"]
+    },
+    {
+      "assetId": "jupiter-exchange-solana",
+      "problemSolved": "聚合 Solana 流动性和路由，降低链上交易者寻找最佳报价的成本。",
+      "market": {"segment":"DEX 聚合/交易基础设施","addressableNeed":"现货交换、路由、永续和链上交易执行","scaleIndicators":["聚合成交量","活跃交易地址","Jupiter 产品费用与 TVL"],"scaleCaveat":"聚合成交量包含底层 DEX 交易，不能重复计入整个市场。"},
+      "economics": {"entityType":"dao_protocol","profitabilityStatus":"revenue_generating_not_profit_proven","evidence":"Jupiter 部分产品有可观察费用/收入，但 JUP DAO、团队和代币持有人之间的净利润分配未完全公开。","confidence":"medium"},
+      "quality": {"demandEvidence":"high","maturity":"operating","securityEvidence":"medium","decentralization":"medium","tokenCapture":"indirect","supplyRisk":"high","confidence":"medium"},
+      "sources":["https://station.jup.ag/docs","https://defillama.com/protocol/jupiter-aggregator","https://www.coingecko.com/en/coins/jupiter"]
+    },
+    {
+      "assetId": "ethena",
+      "problemSolved": "通过对冲和链上抵押构建与美元挂钩、可产生收益的合成美元。",
+      "market": {"segment":"合成美元/稳定币","addressableNeed":"链上美元流动性、储值和收益型结算资产","scaleIndicators":["USDe 供应和 TVL","稳定币交易量","资金费率/抵押收益与清算风险"],"scaleCaveat":"USDe 供应和收益率受市场、对冲和交易所流动性影响，不是固定利率市场。"},
+      "economics": {"entityType":"private_company_dao_protocol","profitabilityStatus":"revenue_generating_not_profit_proven","evidence":"协议可观察到储备收益和费用，但 Ethena Labs、基金会、保险基金和代币经济不能直接推出净利润。","confidence":"medium"},
+      "quality": {"demandEvidence":"medium","maturity":"operating","securityEvidence":"medium","decentralization":"low","tokenCapture":"indirect","supplyRisk":"high","confidence":"medium"},
+      "sources":["https://docs.ethena.fi/","https://defillama.com/protocol/ethena-usde","https://www.coingecko.com/en/coins/ethena"]
+    },
+    {
+      "assetId": "maker",
+      "problemSolved": "通过超额抵押和治理发行链上美元 DAI/USDS，并提供去中心化信用市场。",
+      "market": {"segment":"去中心化稳定币/信用","addressableNeed":"链上美元、抵押借贷和储值结算","scaleIndicators":["稳定币供应与 TVL","借贷利息/清算费用","DAO 金库和真实世界资产收益"],"scaleCaveat":"Sky/Maker 生态经历品牌和治理迁移，历史 MKR/SKY 经济不能混为一谈。"},
+      "economics": {"entityType":"dao_protocol","profitabilityStatus":"revenue_generating_not_profit_proven","evidence":"DAO 可观察到稳定币利息和现实资产收益，但运营、激励和风险准备金后净利润仍需以治理财务报表为准。","confidence":"medium"},
+      "quality": {"demandEvidence":"high","maturity":"mature","securityEvidence":"medium","decentralization":"medium","tokenCapture":"direct","supplyRisk":"medium","confidence":"medium"},
+      "sources":["https://makerdao.com/","https://defillama.com/protocol/maker","https://www.coingecko.com/en/coins/maker"]
+    },
+    {
+      "assetId": "hyperliquid",
+      "problemSolved": "提供高性能、链上原生的现货和永续合约交易执行。",
+      "market": {"segment":"链上衍生品交易","addressableNeed":"杠杆交易、做市和透明结算","scaleIndicators":["永续成交量和未平仓量","交易费用/收入","保险基金和 HLP 流动性"],"scaleCaveat":"交易量可能受高频和激励影响，费用不等于团队净利润。"},
+      "economics": {"entityType":"protocol_foundation","profitabilityStatus":"revenue_generating_not_profit_proven","evidence":"Hyperliquid 有公开交易费用和协议金库/回购相关数据，但团队、基金会和代币持有人的完整成本与利润未审计公开。","confidence":"medium"},
+      "quality": {"demandEvidence":"high","maturity":"operating","securityEvidence":"medium","decentralization":"low","tokenCapture":"direct","supplyRisk":"medium","confidence":"medium"},
+      "sources":["https://hyperliquid.gitbook.io/hyperliquid-docs/","https://defillama.com/protocol/hyperliquid-perps","https://www.coingecko.com/en/coins/hyperliquid"]
+    },
+    {
+      "assetId": "dydx-chain",
+      "problemSolved": "用专用应用链提供非托管永续合约和订单簿交易。",
+      "market": {"segment":"去中心化衍生品","addressableNeed":"杠杆交易、做市和透明清算","scaleIndicators":["永续成交量/OI","协议费用和保险基金","验证者与交易者活动"],"scaleCaveat":"交易量和费用会受激励、市场波动和做市策略影响。"},
+      "economics": {"entityType":"dao_protocol","profitabilityStatus":"revenue_generating_not_profit_proven","evidence":"dYdX Chain 有交易费用和协议分配，但 DAO、基金会、验证者和生态激励后的净利润不公开统一。","confidence":"medium"},
+      "quality": {"demandEvidence":"medium","maturity":"operating","securityEvidence":"medium","decentralization":"medium","tokenCapture":"direct","supplyRisk":"high","confidence":"medium"},
+      "sources":["https://docs.dydx.xyz/","https://defillama.com/protocol/dydx-v4","https://www.coingecko.com/en/coins/dydx-chain"]
+    },
+    {
+      "assetId": "aster-2",
+      "problemSolved": "提供面向衍生品交易的集中流动性、杠杆和订单簿执行。",
+      "market": {"segment":"衍生品 DEX","addressableNeed":"永续合约、杠杆和做市","scaleIndicators":["成交量/OI","保险基金和流动性","费用与活跃交易者"],"scaleCaveat":"项目透明度和长期费用质量需要持续观察，不能只看短期成交量。"},
+      "economics": {"entityType":"private_protocol","profitabilityStatus":"not_disclosed","evidence":"公开资料不足以核验团队成本、收入分配和净利润；看板只应展示协议活动代理。","confidence":"low"},
+      "quality": {"demandEvidence":"medium","maturity":"early","securityEvidence":"limited","decentralization":"low","tokenCapture":"unknown","supplyRisk":"high","confidence":"low"},
+      "sources":["https://docs.asterdex.com/","https://www.coingecko.com/en/coins/aster"]
+    },
+    {
+      "assetId": "bittensor",
+      "problemSolved": "以激励市场协调分布式 AI 模型、算力和专门化子网。",
+      "market": {"segment":"去中心化 AI 网络","addressableNeed":"模型服务、算力、数据和 AI 任务市场","scaleIndicators":["子网/矿工活动","服务请求和代币排放","节点与开发者数量"],"scaleCaveat":"代币排放和注册活动不等于付费 AI 需求或项目利润。"},
+      "economics": {"entityType":"permissionless_network_dao","profitabilityStatus":"not_applicable","evidence":"Bittensor 的核心经济是排放和子网激励，未发现单一项目方可审计净利润。","confidence":"medium"},
+      "quality": {"demandEvidence":"medium","maturity":"early","securityEvidence":"limited","decentralization":"medium","tokenCapture":"indirect","supplyRisk":"high","confidence":"low"},
+      "sources":["https://docs.bittensor.com/","https://www.coingecko.com/en/coins/bittensor"]
+    },
+    {
+      "assetId": "fetch-ai",
+      "problemSolved": "让软件代理能够发现服务、协作并在机器间执行任务。",
+      "market": {"segment":"AI 代理/机器经济","addressableNeed":"自动化服务、数据交换和机器协作","scaleIndicators":["代理/服务数量","链上任务和费用","开发者与企业集成"],"scaleCaveat":"AI 叙事和开发者注册量不能直接等同付费市场规模。"},
+      "economics": {"entityType":"foundation_company_ecosystem","profitabilityStatus":"not_disclosed","evidence":"Fetch.ai/ASI 相关实体的公开财务不足以证明项目方盈利。","confidence":"low"},
+      "quality": {"demandEvidence":"medium","maturity":"operating","securityEvidence":"limited","decentralization":"medium","tokenCapture":"indirect","supplyRisk":"high","confidence":"low"},
+      "sources":["https://docs.fetch.ai/","https://www.coingecko.com/en/coins/artificial-superintelligence-alliance"]
+    },
+    {
+      "assetId": "worldcoin-wld",
+      "problemSolved": "用隐私保护的生物特征证明减少网络中的女巫和重复身份。",
+      "market": {"segment":"数字身份/Proof of Personhood","addressableNeed":"互联网身份、反女巫、空投和数字公共服务","scaleIndicators":["验证身份数量","World ID 应用接入","代币市值与活跃凭证"],"scaleCaveat":"已验证 World ID 数量不等于独立活跃用户，也不代表身份服务收入。"},
+      "economics": {"entityType":"private_company_foundation","profitabilityStatus":"not_disclosed","evidence":"Tools for Humanity 与 World Foundation 的公司/基金会财务边界不同，未见可核验项目级净利润。","confidence":"medium"},
+      "quality": {"demandEvidence":"medium","maturity":"operating","securityEvidence":"limited","decentralization":"low","tokenCapture":"weak","supplyRisk":"high","confidence":"medium"},
+      "sources":["https://docs.world.org/","https://www.coingecko.com/en/coins/worldcoin-wld"]
+    },
+    {
+      "assetId": "virtual-protocol",
+      "problemSolved": "为可拥有、可交易、可组合的 AI 代理提供发行和协作平台。",
+      "market": {"segment":"AI 代理平台","addressableNeed":"AI 代理服务、内容、游戏和社交应用","scaleIndicators":["代理数量和使用量","协议交易/费用","活跃钱包与开发者"],"scaleCaveat":"代币发行数量和社交热度不等于持续付费需求。"},
+      "economics": {"entityType":"protocol_company","profitabilityStatus":"not_disclosed","evidence":"协议活动可能产生费用，但团队成本、收入归属和净利润缺少公开 P&L。","confidence":"low"},
+      "quality": {"demandEvidence":"low","maturity":"early","securityEvidence":"limited","decentralization":"low","tokenCapture":"unknown","supplyRisk":"high","confidence":"low"},
+      "sources":["https://whitepaper.virtuals.io/","https://www.coingecko.com/en/coins/virtual-protocol"]
+    },
+    {
+      "assetId": "render-token",
+      "problemSolved": "把闲置 GPU 资源连接给渲染、AI 和计算需求方。",
+      "market": {"segment":"去中心化 GPU/渲染网络","addressableNeed":"渲染、AI 推理和高性能计算","scaleIndicators":["节点/ GPU 供给","任务量和渲染费用","网络使用与 RNDR/RENDER 消耗"],"scaleCaveat":"节点登记和代币转账不能直接等于完成的付费计算任务。"},
+      "economics": {"entityType":"foundation_network","profitabilityStatus":"not_disclosed","evidence":"Render Network Foundation 与节点运营、应用方和代币经济分开，未见公开项目净利润。","confidence":"medium"},
+      "quality": {"demandEvidence":"medium","maturity":"operating","securityEvidence":"medium","decentralization":"medium","tokenCapture":"direct","supplyRisk":"medium","confidence":"medium"},
+      "sources":["https://rendernetwork.com/","https://www.coingecko.com/en/coins/render-token"]
+    },
+    {
+      "assetId": "filecoin",
+      "problemSolved": "用可验证市场提供去中心化存储、数据持久性和检索服务。",
+      "market": {"segment":"去中心化存储/DePIN","addressableNeed":"云存储、归档、数据可验证性和算力数据层","scaleIndicators":["有效存储容量和数据封装","存储交易收入/费用","活跃存储提供者与检索需求"],"scaleCaveat":"存储容量可能包含激励驱动的供给，需与真实付费数据需求分开。"},
+      "economics": {"entityType":"permissionless_network_foundation","profitabilityStatus":"not_applicable","evidence":"Filecoin 网络有区块奖励、存储抵押和费用，但 Protocol Labs/基金会没有代表整个网络的公开净利润。","confidence":"high"},
+      "quality": {"demandEvidence":"medium","maturity":"operating","securityEvidence":"medium","decentralization":"high","tokenCapture":"direct","supplyRisk":"high","confidence":"medium"},
+      "sources":["https://docs.filecoin.io/","https://www.coingecko.com/en/coins/filecoin"]
+    },
+    {
+      "assetId": "livepeer",
+      "problemSolved": "把分布式 GPU/节点资源用于视频转码和实时媒体基础设施。",
+      "market": {"segment":"去中心化视频基础设施","addressableNeed":"视频直播、转码和 AI 媒体处理","scaleIndicators":["转码分钟数/任务量","节点与 GPU 供给","协议费用和活跃开发者"],"scaleCaveat":"节点和转码活动需要区分补贴任务与真实付费需求。"},
+      "economics": {"entityType":"protocol_foundation","profitabilityStatus":"revenue_generating_not_profit_proven","evidence":"Livepeer 有服务费用和网络使用代理，但基金会、节点和开发团队的净利润未公开。","confidence":"medium"},
+      "quality": {"demandEvidence":"medium","maturity":"operating","securityEvidence":"medium","decentralization":"medium","tokenCapture":"direct","supplyRisk":"medium","confidence":"medium"},
+      "sources":["https://livepeer.org/","https://www.coingecko.com/en/coins/livepeer"]
+    },
+    {
+      "assetId": "helium",
+      "problemSolved": "让个人和企业提供无线覆盖，并用代币化数据额度结算连接服务。",
+      "market": {"segment":"去中心化无线/DePIN","addressableNeed":"物联网、移动网络和低成本无线覆盖","scaleIndicators":["有效热点与覆盖","数据额度消耗/移动用户","网络费用和活跃设备"],"scaleCaveat":"热点数量不等于有效覆盖或付费终端；补贴和真实数据使用需分开。"},
+      "economics": {"entityType":"foundation_network","profitabilityStatus":"revenue_generating_not_profit_proven","evidence":"Helium 有数据额度消耗和网络费用，但基金会、运营商与热点主的成本和净利润没有统一公开。","confidence":"medium"},
+      "quality": {"demandEvidence":"medium","maturity":"operating","securityEvidence":"medium","decentralization":"medium","tokenCapture":"direct","supplyRisk":"high","confidence":"medium"},
+      "sources":["https://docs.helium.com/","https://www.coingecko.com/en/coins/helium"]
+    },
+    {
+      "assetId": "dogecoin",
+      "problemSolved": "以低门槛、社区驱动的数字货币承载小额支付和社交传播。",
+      "market": {"segment":"社区货币/支付","addressableNeed":"小额支付、社交打赏和文化资产","scaleIndicators":["资产市值","交易/活跃地址","支付和商家接受度"],"scaleCaveat":"社交热度和市值不是可持续商业市场规模。"},
+      "economics": {"entityType":"permissionless_network_community","profitabilityStatus":"not_applicable","evidence":"没有单一项目方 P&L；矿工收入属于网络激励。","confidence":"high"},
+      "quality": {"demandEvidence":"medium","maturity":"mature","securityEvidence":"medium","decentralization":"high","tokenCapture":"direct","supplyRisk":"medium","confidence":"medium"},
+      "sources":["https://dogecoin.com/","https://www.coingecko.com/en/coins/dogecoin"]
+    },
+    {
+      "assetId": "pepe",
+      "problemSolved": "提供以网络文化和社区注意力为核心的社交/投机型资产。",
+      "market": {"segment":"Memecoin/社区注意力","addressableNeed":"社交表达、社区协调和短周期交易流动性","scaleIndicators":["资产市值","DEX/CEX 成交额","持有地址和社交传播"],"scaleCaveat":"注意力和交易量高度周期化，不能视为稳定需求市场。"},
+      "economics": {"entityType":"community_token","profitabilityStatus":"not_applicable","evidence":"未识别出可审计的运营公司或项目方 P&L；代币市值不等于项目收入。","confidence":"high"},
+      "quality": {"demandEvidence":"speculative","maturity":"unclear","securityEvidence":"limited","decentralization":"unknown","tokenCapture":"none","supplyRisk":"high","confidence":"medium"},
+      "sources":["https://www.coingecko.com/en/coins/pepe"]
+    },
+    {
+      "assetId": "dogwifcoin",
+      "problemSolved": "以社区文化和交易流动性承载 Solana 生态中的社交注意力。",
+      "market": {"segment":"Memecoin/社区注意力","addressableNeed":"社交传播、社区协调和短周期交易","scaleIndicators":["资产市值","DEX/CEX 成交额","持有地址和社交活跃度"],"scaleCaveat":"没有稳定的产品需求或可预测收入口径。"},
+      "economics": {"entityType":"community_token","profitabilityStatus":"not_applicable","evidence":"未见可审计项目公司 P&L；交易费和市值不能证明团队盈利。","confidence":"high"},
+      "quality": {"demandEvidence":"speculative","maturity":"unclear","securityEvidence":"limited","decentralization":"unknown","tokenCapture":"none","supplyRisk":"high","confidence":"low"},
+      "sources":["https://www.coingecko.com/en/coins/dogwifcoin"]
+    },
+    {
+      "assetId": "official-trump",
+      "problemSolved": "以政治文化和品牌注意力发行可交易的社区数字资产。",
+      "market": {"segment":"品牌/政治 Memecoin","addressableNeed":"社群表达、注意力交易和数字纪念品","scaleIndicators":["资产市值","成交额与流动性","持有者和社交传播"],"scaleCaveat":"发行安排、关联实体和代币持有人利益可能不同，注意力市场高度事件驱动。"},
+      "economics": {"entityType":"brand_token","profitabilityStatus":"not_disclosed","evidence":"关联实体的商业收益、代币分配和项目方成本需以发行文件核验，不能从价格或市值推出盈利。","confidence":"medium"},
+      "quality": {"demandEvidence":"speculative","maturity":"unclear","securityEvidence":"limited","decentralization":"low","tokenCapture":"weak","supplyRisk":"high","confidence":"medium"},
+      "sources":["https://gettrumpmemes.com/","https://www.coingecko.com/en/coins/official-trump"]
+    },
+    {
+      "assetId": "shiba-inu",
+      "problemSolved": "以社区文化为入口，逐步扩展到代币、DEX、游戏和社交生态。",
+      "market": {"segment":"Memecoin/社区生态","addressableNeed":"社交注意力、社区协调和生态应用流动性","scaleIndicators":["资产市值","生态 DEX/桥/游戏使用","成交额、持有地址和销毁"],"scaleCaveat":"生态产品收入与 SHIB 代币价值捕获、团队盈利并不相同。"},
+      "economics": {"entityType":"community_dao_ecosystem","profitabilityStatus":"not_disclosed","evidence":"生态可能有产品费用，但缺少统一项目方 P&L 和可验证的代币持有人净收益。","confidence":"low"},
+      "quality": {"demandEvidence":"speculative","maturity":"operating","securityEvidence":"limited","decentralization":"medium","tokenCapture":"weak","supplyRisk":"high","confidence":"low"},
+      "sources":["https://docs.shib.io/","https://www.coingecko.com/en/coins/shiba-inu"]
+    },
+    {
+      "assetId": "bonk",
+      "problemSolved": "以 Solana 社区文化、空投和生态激励聚合注意力与流动性。",
+      "market": {"segment":"Solana Memecoin","addressableNeed":"社交传播、社区激励和交易流动性","scaleIndicators":["资产市值","DEX 成交额","持有地址、生态合作和社交活跃度"],"scaleCaveat":"短期交易和空投不能证明持续产品需求或项目盈利。"},
+      "economics": {"entityType":"community_token","profitabilityStatus":"not_applicable","evidence":"未识别出可审计的单一运营实体或项目方 P&L。","confidence":"high"},
+      "quality": {"demandEvidence":"speculative","maturity":"unclear","securityEvidence":"limited","decentralization":"unknown","tokenCapture":"none","supplyRisk":"high","confidence":"low"},
+      "sources":["https://bonkcoin.com/","https://www.coingecko.com/en/coins/bonk"]
+    },
+    {
+      "assetId": "floki",
+      "problemSolved": "从 Meme 社区扩展到游戏、教育、支付和 DeFi 产品的品牌生态。",
+      "market": {"segment":"Memecoin/品牌生态","addressableNeed":"社区注意力、数字商品、游戏和链上应用","scaleIndicators":["资产市值","产品用户/交易量","DEX 流动性和社交传播"],"scaleCaveat":"产品使用量、营销支出和代币价值捕获需要分别核验。"},
+      "economics": {"entityType":"private_ecosystem","profitabilityStatus":"not_disclosed","evidence":"项目方和产品实体财务未公开到足以判断净利润，代币交易量不是公司收入。","confidence":"low"},
+      "quality": {"demandEvidence":"speculative","maturity":"operating","securityEvidence":"limited","decentralization":"low","tokenCapture":"weak","supplyRisk":"high","confidence":"low"},
+      "sources":["https://docs.floki.com/","https://www.coingecko.com/en/coins/floki"]
+    },
+    {
+      "assetId": "monero",
+      "problemSolved": "提供默认隐私、不可追踪和可替代的数字现金。",
+      "market": {"segment":"隐私支付网络","addressableNeed":"财务隐私、抗审查支付和可替代性","scaleIndicators":["资产市值","交易量与隐私交易活动","节点和算力分布"],"scaleCaveat":"隐私设计使活跃用户和资金流更难公开精确测量。"},
+      "economics": {"entityType":"permissionless_network_community","profitabilityStatus":"not_applicable","evidence":"没有单一项目方 P&L；矿工尾部发行和费用是网络安全激励。","confidence":"high"},
+      "quality": {"demandEvidence":"medium","maturity":"mature","securityEvidence":"strong","decentralization":"high","tokenCapture":"direct","supplyRisk":"low","confidence":"high"},
+      "sources":["https://www.getmonero.org/resources/moneropedia/","https://www.coingecko.com/en/coins/monero"]
+    },
+    {
+      "assetId": "zcash",
+      "problemSolved": "通过可选屏蔽交易提供可验证的数字现金隐私。",
+      "market": {"segment":"隐私支付网络","addressableNeed":"选择性财务隐私、支付和合规披露","scaleIndicators":["资产市值","屏蔽池和交易量","节点/开发者与基金会活动"],"scaleCaveat":"屏蔽交易使用和真实用户数难以从公开链上完全推断。"},
+      "economics": {"entityType":"foundation_company_network","profitabilityStatus":"not_disclosed","evidence":"Electric Coin Co、Zcash Foundation 与网络资金安排不同，未见统一可审计项目净利润。","confidence":"medium"},
+      "quality": {"demandEvidence":"medium","maturity":"mature","securityEvidence":"strong","decentralization":"medium","tokenCapture":"direct","supplyRisk":"medium","confidence":"medium"},
+      "sources":["https://zcash.readthedocs.io/","https://www.coingecko.com/en/coins/zcash"]
+    },
+    {
+      "assetId": "dash",
+      "problemSolved": "提供快速支付、可选隐私和社区金库治理。",
+      "market": {"segment":"支付/隐私网络","addressableNeed":"点对点支付、商户支付和隐私交易","scaleIndicators":["资产市值","交易量/活跃地址","主节点和治理金库"],"scaleCaveat":"治理金库支出不是项目方利润，商户采用需要独立验证。"},
+      "economics": {"entityType":"dao_network_foundation","profitabilityStatus":"not_disclosed","evidence":"Dash Treasury、主节点和基金会有不同资金流，未见统一项目方净利润。","confidence":"medium"},
+      "quality": {"demandEvidence":"low","maturity":"mature","securityEvidence":"medium","decentralization":"medium","tokenCapture":"direct","supplyRisk":"medium","confidence":"medium"},
+      "sources":["https://docs.dash.org/","https://www.coingecko.com/en/coins/dash"]
+    },
+    {
+      "assetId": "ondo-finance",
+      "problemSolved": "把短期美国国债等现实世界资产包装为链上、可组合的收益产品。",
+      "market": {"segment":"RWA/代币化国债","addressableNeed":"机构现金管理、链上美元收益和证券结算","scaleIndicators":["代币化资产 AUM/TVL","产品持有人与转账量","管理费/分销渠道"],"scaleCaveat":"RWA 产品的底层资产规模与 ONDO 代币价值、Ondo 公司利润不是同一口径。"},
+      "economics": {"entityType":"private_company_protocol","profitabilityStatus":"revenue_generating_not_profit_proven","evidence":"产品管理费和资产规模可能形成收入，但 Ondo Finance 私营主体成本、利润和 ONDO 代币价值捕获未公开完整披露。","confidence":"medium"},
+      "quality": {"demandEvidence":"medium","maturity":"operating","securityEvidence":"medium","decentralization":"low","tokenCapture":"weak","supplyRisk":"high","confidence":"medium"},
+      "sources":["https://docs.ondo.finance/","https://www.coingecko.com/en/coins/ondo-finance"]
+    },
+    {
+      "assetId": "ordinals",
+      "problemSolved": "在 Bitcoin 区块空间中记录可验证的铭文和原生资产。",
+      "market": {"segment":"Bitcoin 生态/数字资产发行","addressableNeed":"数字收藏、资产发行和 Bitcoin 区块空间应用","scaleIndicators":["铭文/资产市值","交易费和区块空间需求","活跃集合与交易量"],"scaleCaveat":"ORDI 不是 Ordinals 协议股权，生态费用不能直接归属于代币持有人。"},
+      "economics": {"entityType":"community_token_protocol","profitabilityStatus":"not_applicable","evidence":"ORDI 没有清晰的单一项目公司 P&L；铭文交易费主要归矿工和市场参与者。","confidence":"high"},
+      "quality": {"demandEvidence":"speculative","maturity":"early","securityEvidence":"medium","decentralization":"high","tokenCapture":"none","supplyRisk":"medium","confidence":"medium"},
+      "sources":["https://docs.ordinals.com/","https://www.coingecko.com/en/coins/ordi"]
+    },
+    {
+      "assetId": "blockstack",
+      "problemSolved": "在 Bitcoin 安全锚定上提供智能合约、身份和应用执行。",
+      "market": {"segment":"Bitcoin L2/智能合约生态","addressableNeed":"Bitcoin 资产应用、身份和可编程结算","scaleIndicators":["资产市值","应用 TVL/交易量","锁定 BTC 和开发者活动"],"scaleCaveat":"Stacks 生态使用量与 STX 代币价值捕获、基金会资金需分开。"},
+      "economics": {"entityType":"foundation_ecosystem","profitabilityStatus":"not_disclosed","evidence":"Stacks Foundation、开发公司和网络费用没有统一公开 P&L。","confidence":"medium"},
+      "quality": {"demandEvidence":"medium","maturity":"operating","securityEvidence":"medium","decentralization":"medium","tokenCapture":"direct","supplyRisk":"medium","confidence":"medium"},
+      "sources":["https://stacks.co/learn","https://www.coingecko.com/en/coins/blockstack"]
+    },
+    {
+      "assetId": "chainlink",
+      "problemSolved": "把链下数据、计算和跨链消息以可验证方式提供给智能合约。",
+      "market": {"segment":"预言机/跨链基础设施","addressableNeed":"金融数据、随机数、自动化、跨链和现实世界资产","scaleIndicators":["集成协议 TVL","数据请求/服务费用","节点运营和服务覆盖"],"scaleCaveat":"被保护的 TVL 是风险暴露代理，不等于 Chainlink 公司收入。"},
+      "economics": {"entityType":"private_company_network","profitabilityStatus":"not_disclosed","evidence":"Chainlink Labs 私营，服务费、LINK 释放和生态补贴不足以推出公司净利润。","confidence":"medium"},
+      "quality": {"demandEvidence":"high","maturity":"mature","securityEvidence":"medium","decentralization":"medium","tokenCapture":"indirect","supplyRisk":"medium","confidence":"medium"},
+      "sources":["https://docs.chain.link/","https://www.coingecko.com/en/coins/chainlink"]
+    },
+    {
+      "assetId": "ethereum-name-service",
+      "problemSolved": "把人类可读域名映射到地址、应用和身份数据。",
+      "market": {"segment":"Web3 名称/身份基础设施","addressableNeed":"钱包地址、应用命名、身份和可读支付","scaleIndicators":["注册域名数量/续费","协议注册费与活跃解析","持有地址和集成应用"],"scaleCaveat":"注册费是协议收入代理，DAO 支出后是否净盈利需要治理财务。"},
+      "economics": {"entityType":"dao_protocol","profitabilityStatus":"revenue_generating_not_profit_proven","evidence":"ENS 注册和续费费用可观察并进入 DAO 金库，但 ENS DAO 净利润不能由总注册费直接推断。","confidence":"high"},
+      "quality": {"demandEvidence":"medium","maturity":"mature","securityEvidence":"medium","decentralization":"high","tokenCapture":"indirect","supplyRisk":"medium","confidence":"medium"},
+      "sources":["https://docs.ens.domains/","https://www.coingecko.com/en/coins/ethereum-name-service"]
+    },
+    {
+      "assetId": "pi-network",
+      "problemSolved": "尝试用移动端分发和社交信任降低普通用户接触加密资产的门槛。",
+      "market": {"segment":"移动端加密生态/社区网络","addressableNeed":"大众分发、支付和应用生态","scaleIndicators":["活跃账户/迁移账户","可用交易流动性和应用数量","资产市值与成交额"],"scaleCaveat":"注册用户、下载量和活跃链上账户可能差异很大，公开独立审计有限。"},
+      "economics": {"entityType":"private_company_ecosystem","profitabilityStatus":"not_disclosed","evidence":"Pi Core Team/生态主体没有可核验公开 P&L；用户规模宣传不能证明项目盈利。","confidence":"low"},
+      "quality": {"demandEvidence":"low","maturity":"unclear","securityEvidence":"limited","decentralization":"low","tokenCapture":"unknown","supplyRisk":"high","confidence":"low"},
+      "sources":["https://minepi.com/white-paper/","https://www.coingecko.com/en/coins/pi-network"]
+    },
+    {
+      "assetId": "internet-computer",
+      "problemSolved": "把应用计算、存储和服务直接部署到开放网络，减少对传统云平台的依赖。",
+      "market": {"segment":"去中心化计算/L1","addressableNeed":"Web3 应用托管、链上计算和数据存储","scaleIndicators":["Canister/应用数量","cycles 消耗和网络计算","节点与开发者活动"],"scaleCaveat":"Canister 数量和 cycles 使用不能直接等于 DFINITY 基金会利润。"},
+      "economics": {"entityType":"foundation_network","profitabilityStatus":"not_disclosed","evidence":"DFINITY Foundation 与网络费用、节点和 ICP 代币经济不是同一 P&L，未见统一净利润披露。","confidence":"medium"},
+      "quality": {"demandEvidence":"medium","maturity":"operating","securityEvidence":"medium","decentralization":"medium","tokenCapture":"direct","supplyRisk":"high","confidence":"medium"},
+      "sources":["https://internetcomputer.org/docs/current/developer-docs/overview","https://www.coingecko.com/en/coins/internet-computer"]
+    },
+    {
+      "assetId": "morpho",
+      "problemSolved": "让借贷市场由参数化、非托管的市场创建者自由部署，而不是依赖单一池子。",
+      "market": {"segment":"DeFi 借贷市场","addressableNeed":"抵押借贷、风险分层和可组合信用","scaleIndicators":["TVL/借款余额","利用率与市场数量","协议费用/收入和活跃地址"],"scaleCaveat":"TVL 与总费用不等于 DAO/团队净利润。"},
+      "economics": {"entityType":"dao_protocol_company","profitabilityStatus":"revenue_generating_not_profit_proven","evidence":"Morpho 市场和金库费用可观察，但 Morpho Labs、DAO 和激励成本后净利润未公开审计。","confidence":"medium"},
+      "quality": {"demandEvidence":"medium","maturity":"operating","securityEvidence":"medium","decentralization":"medium","tokenCapture":"indirect","supplyRisk":"high","confidence":"medium"},
+      "sources":["https://docs.morpho.org/","https://defillama.com/protocol/morpho-blue","https://www.coingecko.com/en/coins/morpho"]
+    },
+    {
+      "assetId": "polygon-ecosystem-token",
+      "problemSolved": "为 Polygon PoS、扩容网络和生态升级提供统一的费用、质押与治理代币。",
+      "market": {"segment":"L2/扩容生态","addressableNeed":"以太坊扩容、支付、应用和跨链流动性","scaleIndicators":["资产市值","Polygon/Polygon zkEVM 交易与 TVL","POL 质押和费用消耗"],"scaleCaveat":"POL 迁移和多链生态使代币价值捕获需要持续跟踪。"},
+      "economics": {"entityType":"foundation_company_ecosystem","profitabilityStatus":"not_disclosed","evidence":"Polygon Labs、基金会和网络费用没有统一公开 P&L；生态 TVL 不是项目方利润。","confidence":"medium"},
+      "quality": {"demandEvidence":"high","maturity":"mature","securityEvidence":"medium","decentralization":"medium","tokenCapture":"direct","supplyRisk":"medium","confidence":"medium"},
+      "sources":["https://polygon.technology/pol","https://www.coingecko.com/en/coins/polygon-ecosystem-token"]
+    },
+    {
+      "assetId": "pancakeswap-token",
+      "problemSolved": "提供多链现货交易、流动性、收益和生态激励。",
+      "market": {"segment":"多链 DEX/DeFi","addressableNeed":"现货交换、做市、收益与链上金融","scaleIndicators":["DEX 成交量","TVL/流动性深度","协议费用、CAKE 锁仓和活跃地址"],"scaleCaveat":"交易量、LP 收益和 CAKE 排放不能直接证明团队净利润。"},
+      "economics": {"entityType":"dao_protocol_company","profitabilityStatus":"revenue_generating_not_profit_proven","evidence":"PancakeSwap 有公开交易费用和产品收入代理，但运营、激励和代币回购后的净利润未统一披露。","confidence":"high"},
+      "quality": {"demandEvidence":"high","maturity":"mature","securityEvidence":"medium","decentralization":"medium","tokenCapture":"indirect","supplyRisk":"medium","confidence":"high"},
+      "sources":["https://docs.pancakeswap.finance/","https://defillama.com/protocol/pancakeswap-amm","https://www.coingecko.com/en/coins/pancakeswap-token"]
+    },
+    {
+      "assetId": "hedera-hashgraph",
+      "problemSolved": "以稳定费用、高吞吐和企业治理提供面向机构的分布式账本。",
+      "market": {"segment":"企业账本/L1","addressableNeed":"支付、代币化、身份和企业数据服务","scaleIndicators":["交易/费用和活跃账户","企业应用与治理成员","生态稳定币/资产余额"],"scaleCaveat":"治理成员和企业合作公告不等于持续付费收入或网络盈利。"},
+      "economics": {"entityType":"council_network","profitabilityStatus":"not_disclosed","evidence":"Hedera Council、基金会和网络节点的财务边界不同，未见可审计项目净利润。","confidence":"medium"},
+      "quality": {"demandEvidence":"medium","maturity":"operating","securityEvidence":"medium","decentralization":"low","tokenCapture":"direct","supplyRisk":"high","confidence":"medium"},
+      "sources":["https://docs.hedera.com/","https://www.coingecko.com/en/coins/hedera-hashgraph"]
+    },
+    {
+      "assetId": "cosmos",
+      "problemSolved": "通过 IBC 和应用链 SDK 连接拥有主权的区块链网络。",
+      "market": {"segment":"互操作/应用链生态","addressableNeed":"跨链消息、应用链发行和主权治理","scaleIndicators":["IBC 转账量和活跃链","生态 TVL/稳定币","验证者、开发者和链间安全"],"scaleCaveat":"ATOM 的价值捕获与整个 Cosmos 生态规模并不完全相同。"},
+      "economics": {"entityType":"foundation_dao_ecosystem","profitabilityStatus":"not_disclosed","evidence":"Interchain Foundation、Cosmos Hub 和生态团队账目分散，未见统一项目方 P&L。","confidence":"medium"},
+      "quality": {"demandEvidence":"medium","maturity":"mature","securityEvidence":"medium","decentralization":"high","tokenCapture":"direct","supplyRisk":"medium","confidence":"medium"},
+      "sources":["https://docs.cosmos.network/","https://www.coingecko.com/en/coins/cosmos"]
+    },
+    {
+      "assetId": "injective-protocol",
+      "problemSolved": "提供面向交易、衍生品和金融应用的专用链执行环境。",
+      "market": {"segment":"金融应用链/衍生品 DEX","addressableNeed":"现货、衍生品、订单簿和跨链金融","scaleIndicators":["现货/永续成交量和 OI","协议费用与燃烧","TVL、活跃交易者和应用数量"],"scaleCaveat":"交易量需扣除激励和重复路由，燃烧不等于团队利润。"},
+      "economics": {"entityType":"foundation_protocol","profitabilityStatus":"revenue_generating_not_profit_proven","evidence":"Injective 有协议费用和燃烧机制等收入/价值捕获代理，但团队与生态成本后净利润未公开。","confidence":"medium"},
+      "quality": {"demandEvidence":"medium","maturity":"operating","securityEvidence":"medium","decentralization":"medium","tokenCapture":"direct","supplyRisk":"medium","confidence":"medium"},
+      "sources":["https://docs.injective.network/","https://www.coingecko.com/en/coins/injective"]
+    },
+    {
+      "assetId": "quant-network",
+      "problemSolved": "为企业系统提供跨账本互操作、消息和资产流转层。",
+      "market": {"segment":"企业互操作基础设施","addressableNeed":"金融机构、企业和多账本系统连接","scaleIndicators":["企业集成数量","消息/交易量","Overledger 服务合同和使用量"],"scaleCaveat":"企业客户与合同收入透明度有限，QNT 市值不等于 Quant Network Ltd 收入。"},
+      "economics": {"entityType":"private_company","profitabilityStatus":"not_disclosed","evidence":"Quant Network Ltd 为私营公司，未发现足够公开财务资料判断盈利。","confidence":"medium"},
+      "quality": {"demandEvidence":"low","maturity":"operating","securityEvidence":"limited","decentralization":"low","tokenCapture":"weak","supplyRisk":"medium","confidence":"low"},
+      "sources":["https://quant.network/overledger/","https://www.coingecko.com/en/coins/quant"]
+    },
+    {
+      "assetId": "algorand",
+      "problemSolved": "用快速最终性和低费用支持支付、资产发行和公共应用。",
+      "market": {"segment":"L1/支付与资产发行","addressableNeed":"支付、稳定币、证券/资产代币化和应用","scaleIndicators":["资产市值","交易/费用和活跃账户","稳定币/资产余额与开发者活动"],"scaleCaveat":"基金会激励、交易量和真实付费应用需分开。"},
+      "economics": {"entityType":"foundation_company_network","profitabilityStatus":"not_disclosed","evidence":"Algorand Foundation/Inc 与网络代币经济不同，未见统一公开 P&L。","confidence":"medium"},
+      "quality": {"demandEvidence":"low","maturity":"operating","securityEvidence":"medium","decentralization":"medium","tokenCapture":"direct","supplyRisk":"medium","confidence":"medium"},
+      "sources":["https://developer.algorand.org/docs/","https://www.coingecko.com/en/coins/algorand"]
+    },
+    {
+      "assetId": "kaspa",
+      "problemSolved": "用 GHOSTDAG/PoW 设计在保持开放挖矿的同时提高确认吞吐。",
+      "market": {"segment":"PoW 支付网络","addressableNeed":"开放式结算、支付和矿工安全市场","scaleIndicators":["资产市值","哈希率/矿工收入","交易量、节点和活跃地址"],"scaleCaveat":"算力和矿工收入是安全供给代理，不是项目方利润。"},
+      "economics": {"entityType":"permissionless_network_community","profitabilityStatus":"not_applicable","evidence":"没有单一项目方 P&L；矿工获得区块奖励和费用。","confidence":"high"},
+      "quality": {"demandEvidence":"low","maturity":"operating","securityEvidence":"medium","decentralization":"high","tokenCapture":"direct","supplyRisk":"medium","confidence":"medium"},
+      "sources":["https://kaspa.org/docs/","https://www.coingecko.com/en/coins/kaspa"]
+    },
+    {
+      "assetId": "aerodrome-finance",
+      "problemSolved": "为 Base 生态提供集中流动性、稳定币兑换和 ve(3,3) 激励治理。",
+      "market": {"segment":"Base DEX/流动性","addressableNeed":"Base 上的现货交换、做市和生态资产发行","scaleIndicators":["DEX 成交量","TVL/流动性深度","协议费用、锁仓投票和活跃地址"],"scaleCaveat":"激励排放和短期交易量不能直接证明协议净利润。"},
+      "economics": {"entityType":"dao_protocol","profitabilityStatus":"revenue_generating_not_profit_proven","evidence":"Aerodrome 有公开交易费用和投票激励数据，但 DAO/团队的成本、排放和净利润未统一披露。","confidence":"high"},
+      "quality": {"demandEvidence":"high","maturity":"operating","securityEvidence":"medium","decentralization":"medium","tokenCapture":"indirect","supplyRisk":"high","confidence":"medium"},
+      "sources":["https://aerodrome.finance/","https://defillama.com/protocol/aerodrome-v1","https://www.coingecko.com/en/coins/aerodrome-finance"]
+    }
+  ]
+}

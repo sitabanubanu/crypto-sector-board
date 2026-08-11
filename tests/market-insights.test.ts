@@ -3,8 +3,10 @@ import { assetRegistry } from "../lib/market-data/registry";
 import { sectorCatalog } from "../lib/market-data/sector-catalog";
 import {
   getAssetInsight,
+  getAssetQualityResearch,
   getSectorInsight,
   hasCuratedAssetInsight,
+  assetQualityResearchFile,
   sectorInsightsFile,
 } from "../lib/market-insights";
 
@@ -47,5 +49,29 @@ describe("market insight registry", () => {
     const insight = getAssetInsight("future-asset");
     expect(insight.assetId).toBe("future-asset");
     expect(insight.riskNotes.join(" ")).toContain("投资建议");
+  });
+
+  it("covers every registered asset with evidence-bounded quality research", () => {
+    expect(assetQualityResearchFile.assets).toHaveLength(assetRegistry.assets.length);
+    const researchedIds = new Set(assetQualityResearchFile.assets.map((asset) => asset.assetId));
+    expect(researchedIds.size).toBe(assetRegistry.assets.length);
+
+    for (const asset of assetRegistry.assets) {
+      expect(researchedIds.has(asset.assetId)).toBe(true);
+      const research = getAssetQualityResearch(asset.assetId);
+      expect(research.problemSolved.length).toBeGreaterThan(0);
+      expect(research.market.scaleIndicators.length).toBeGreaterThan(0);
+      expect(research.economics.evidence.length).toBeGreaterThan(0);
+      expect(research.sources.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("does not turn protocol revenue proxies into an unsupported profit claim", () => {
+    const statuses = new Set(
+      assetQualityResearchFile.assets.map((asset) => asset.economics.profitabilityStatus),
+    );
+    expect(statuses.has("not_applicable")).toBe(true);
+    expect(statuses.has("not_disclosed")).toBe(true);
+    expect(statuses.has("revenue_generating_not_profit_proven")).toBe(true);
   });
 });

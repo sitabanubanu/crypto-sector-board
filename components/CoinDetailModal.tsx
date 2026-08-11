@@ -1,7 +1,11 @@
 "use client";
 
 import type { CoinSnapshot, SectorSnapshot } from "@/lib/types";
-import type { AssetInsight } from "@/lib/market-insights";
+import {
+  assetQualityResearchFile,
+  type AssetInsight,
+  type AssetQualityResearch,
+} from "@/lib/market-insights";
 import { getCoinReturn, hasCoinReturnForPeriod, coinColorForPeriod, formatPct, formatMarketCap } from "@/lib/colors";
 
 interface Props {
@@ -9,6 +13,7 @@ interface Props {
   sectorName: string;
   sector: SectorSnapshot;
   insight?: AssetInsight;
+  qualityResearch?: AssetQualityResearch;
   closes?: number[]; // daily closes, most recent first (7-30 entries)
   onClose: () => void;
 }
@@ -35,7 +40,7 @@ function turnoverRatio(
   return volume24h / marketCap;
 }
 
-export default function CoinDetailModal({ coin, sectorName, sector, insight, closes, onClose }: Props) {
+export default function CoinDetailModal({ coin, sectorName, sector, insight, qualityResearch, closes, onClose }: Props) {
   const turnover = turnoverRatio(coin.volume24h, coin.marketCap);
   const sectorTurnover = turnoverRatio(sector.totalVolume24h, sector.totalMarketCap);
 
@@ -272,8 +277,90 @@ export default function CoinDetailModal({ coin, sectorName, sector, insight, clo
             </div>
           </div>
         )}
+
+        {qualityResearch && (
+          <div
+            data-testid="asset-quality-research"
+            style={{ padding: "14px 20px 20px", borderTop: "1px solid #f0f1f3" }}
+          >
+            <div style={{ fontSize: 12, color: "#334155", fontWeight: 700, marginBottom: 8 }}>
+              项目质量研究
+            </div>
+            <div style={{ fontSize: 12, color: "#475569", lineHeight: 1.6, marginBottom: 10 }}>
+              <span style={{ color: "#64748b", fontWeight: 600 }}>主要解决：</span>
+              {qualityResearch.problemSolved}
+            </div>
+
+            <div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, marginBottom: 5 }}>
+              市场空间与可观察规模
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+              <QualityMetric label="当前市值" value={formatMarketCap(coin.marketCap)} />
+              <QualityMetric label="24h 成交额" value={coin.volume24h != null ? formatMarketCap(coin.volume24h) : "N/A"} />
+            </div>
+            <div style={{ fontSize: 11, color: "#64748b", lineHeight: 1.5, marginBottom: 6 }}>
+              <span style={{ color: "#94a3b8" }}>细分：</span>{qualityResearch.market.segment}
+              <br />
+              <span style={{ color: "#94a3b8" }}>可寻址需求：</span>{qualityResearch.market.addressableNeed}
+            </div>
+            <InsightList label="规模观察指标" items={qualityResearch.market.scaleIndicators} />
+            <div style={{ fontSize: 10, color: "#94a3b8", lineHeight: 1.5, marginTop: 7 }}>
+              注：{qualityResearch.market.scaleCaveat}
+            </div>
+
+            <div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, marginTop: 12, marginBottom: 5 }}>
+              项目方经济状态
+            </div>
+            <div style={{ fontSize: 12, color: "#334155", fontWeight: 600, lineHeight: 1.5 }}>
+              {profitabilityLabel(qualityResearch.economics.profitabilityStatus)}
+              <span style={{ fontSize: 10, color: "#94a3b8", fontWeight: 400, marginLeft: 6 }}>
+                证据置信度：{qualityResearch.economics.confidence}
+              </span>
+            </div>
+            <div style={{ fontSize: 11, color: "#64748b", lineHeight: 1.5, marginTop: 4 }}>
+              {qualityResearch.economics.evidence}
+            </div>
+
+            <div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, marginTop: 12, marginBottom: 5 }}>
+              质量指标（研究标签，不是投资评级）
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+              <QualityMetric label="需求证据" value={qualityResearch.quality.demandEvidence} />
+              <QualityMetric label="产品成熟度" value={qualityResearch.quality.maturity} />
+              <QualityMetric label="安全证据" value={qualityResearch.quality.securityEvidence} />
+              <QualityMetric label="去中心化" value={qualityResearch.quality.decentralization} />
+              <QualityMetric label="代币价值捕获" value={qualityResearch.quality.tokenCapture} />
+              <QualityMetric label="供给风险" value={qualityResearch.quality.supplyRisk} />
+            </div>
+            <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 7 }}>
+              研究置信度：{qualityResearch.quality.confidence} · 数据复核日期：{assetQualityResearchFile.reviewedAt}
+            </div>
+            <div style={{ marginTop: 8, fontSize: 11, color: "#94a3b8" }}>
+              研究来源：{qualityResearch.sources.map((source) => (
+                <a key={source} href={source} target="_blank" rel="noreferrer" style={{ color: "#2563eb", marginLeft: 4, overflowWrap: "anywhere" }}>
+                  {source.replace(/^https?:\/\//, "").split("/")[0]}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </>
+  );
+}
+
+function profitabilityLabel(status: AssetQualityResearch["economics"]["profitabilityStatus"]): string {
+  if (status === "not_applicable") return "不适用：无单一项目方或网络型资产";
+  if (status === "revenue_generating_not_profit_proven") return "有收入/费用代理，但未证明净利润";
+  return "未披露或证据不足：不能判断项目方是否盈利";
+}
+
+function QualityMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ background: "#f8fafc", border: "1px solid #eef2f7", borderRadius: 6, padding: "6px 8px" }}>
+      <div style={{ fontSize: 10, color: "#94a3b8" }}>{label}</div>
+      <div style={{ fontSize: 11, color: "#334155", fontWeight: 600, marginTop: 2 }}>{value}</div>
+    </div>
   );
 }
 
