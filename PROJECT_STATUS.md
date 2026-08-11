@@ -15,7 +15,7 @@
 - P6 页面：新增板块研究抽屉、币种项目档案、搜索/市场脉搏板块下钻、状态栏 full/compact/hidden 持久化、BTC 视觉权重压缩；桌面与 390×844 移动端控制台无 error/warning。
 - P6 质量研究扩展：已为注册表中的全部 67 个资产建立 `data/asset-quality-research.json`，详情弹窗新增问题定义、可观察市场规模、项目方经济状态和六项质量标签；公开收入代理不会被标成净利润，完整口径见 `docs/15-asset-quality-research.md`。
 - P6 质量门：17 个测试文件、105 项测试、lint、typecheck、registry、migration、生产构建通过；新增 `docs/14-p6-priority-assets-and-insights.md` 与 `docs/15-asset-quality-research.md`。
-- P6 发布：提交 `5541ea8` 已推送 GitHub `main`；Preview deployment `dpl_F7R1Y9yoWT8WcuXhMPCeX9yojQqS` 与 Production deployment `dpl_HzDnhVduhuhHMpvirRrPyszyNjKS` 均为 Ready，正式入口为 `https://crypto-sector-board.vercel.app`。
+- P6 发布：提交 `bfb2d0b` 已推送 GitHub `main`；Preview deployment `dpl_F7R1Y9yoWT8WcuXhMPCeX9yojQqS` 与 Production deployment `dpl_79kiNCxv1ve8hpLUECn8nfoS9C9e` 均为 Ready，正式入口为 `https://crypto-sector-board.vercel.app`。
 - P6 线上复核：Production 页面可以打开币种详情并看到“项目质量研究”区块；`/api/v1/data-health` 返回 `healthy`，quote 191/191 fresh，24h/7d K 线缺口均为 0，database backend 覆盖 67/67。
 
 - P0：安全边界、依赖审计和质量门已完成并通过 `npm run check`。
