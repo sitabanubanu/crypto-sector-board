@@ -1,12 +1,14 @@
 "use client";
 
 import type { CoinSnapshot, SectorSnapshot } from "@/lib/types";
+import type { AssetInsight } from "@/lib/market-insights";
 import { getCoinReturn, hasCoinReturnForPeriod, coinColorForPeriod, formatPct, formatMarketCap } from "@/lib/colors";
 
 interface Props {
   coin: CoinSnapshot;
   sectorName: string;
   sector: SectorSnapshot;
+  insight?: AssetInsight;
   closes?: number[]; // daily closes, most recent first (7-30 entries)
   onClose: () => void;
 }
@@ -33,7 +35,7 @@ function turnoverRatio(
   return volume24h / marketCap;
 }
 
-export default function CoinDetailModal({ coin, sectorName, sector, closes, onClose }: Props) {
+export default function CoinDetailModal({ coin, sectorName, sector, insight, closes, onClose }: Props) {
   const turnover = turnoverRatio(coin.volume24h, coin.marketCap);
   const sectorTurnover = turnoverRatio(sector.totalVolume24h, sector.totalMarketCap);
 
@@ -249,8 +251,40 @@ export default function CoinDetailModal({ coin, sectorName, sector, closes, onCl
             成交活跃度只表示成交量相对市值的大小，不等同于真实资金流入，也不能据此判断吸筹或出货。
           </div>
         </div>
+
+        {insight && (
+          <div style={{ padding: "14px 20px 18px", borderTop: "1px solid #f0f1f3" }}>
+            <div style={{ fontSize: 12, color: "#334155", fontWeight: 700, marginBottom: 6 }}>
+              项目档案 · {insight.role}
+            </div>
+            <div style={{ fontSize: 12, color: "#475569", lineHeight: 1.6, marginBottom: 8 }}>
+              {insight.thesis}
+            </div>
+            <InsightList label="主要用途" items={insight.useCases} />
+            <InsightList label="需求信号" items={insight.demandSignals} />
+            <InsightList label="主要风险" items={insight.riskNotes} />
+            <div style={{ marginTop: 8, fontSize: 11, color: "#94a3b8" }}>
+              资料来源：{insight.sources.map((source) => (
+                <a key={source} href={source} target="_blank" rel="noreferrer" style={{ color: "#2563eb", marginLeft: 4, overflowWrap: "anywhere" }}>
+                  {source.replace(/^https?:\/\//, "").split("/")[0]}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </>
+  );
+}
+
+function InsightList({ label, items }: { label: string; items: string[] }) {
+  return (
+    <div style={{ marginTop: 8 }}>
+      <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 2 }}>{label}</div>
+      <ul style={{ margin: 0, paddingLeft: 16, fontSize: 11, color: "#64748b", lineHeight: 1.5 }}>
+        {items.map((item) => <li key={item}>{item}</li>)}
+      </ul>
+    </div>
   );
 }
 

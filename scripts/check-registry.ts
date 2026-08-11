@@ -9,7 +9,7 @@ import {
   sectorCatalog,
 } from "../lib/market-data/sector-catalog";
 
-const EXPECTED_ASSET_COUNT = 56;
+const EXPECTED_ASSET_COUNT = 67;
 const SPECIAL_ASSET_IDS = [
   "the-open-network",
   "maker",

@@ -44,6 +44,8 @@ interface Props {
   isMobile: boolean;
   activePreset: string;
   onPresetChange: (id: string) => void;
+  statusBarMode: "full" | "compact" | "hidden";
+  onStatusBarModeChange: (mode: "full" | "compact" | "hidden") => void;
 }
 
 export default function Header({
@@ -64,6 +66,8 @@ export default function Header({
   isMobile,
   activePreset,
   onPresetChange,
+  statusBarMode,
+  onStatusBarModeChange,
 }: Props) {
   const [nowMs, setNowMs] = useState<number | null>(null);
 
@@ -137,12 +141,59 @@ export default function Header({
     ? `覆盖 ${(dataQuality.coverageRatio * 100).toFixed(0)}%`
     : null;
 
+  const cycleStatusBarMode = () => {
+    const next = statusBarMode === "full"
+      ? "compact"
+      : statusBarMode === "compact"
+        ? "hidden"
+        : "full";
+    onStatusBarModeChange(next);
+  };
+
+  if (statusBarMode === "hidden") {
+    return (
+      <header
+        style={{
+          background: "#ffffff",
+          borderBottom: "1px solid #e5e7eb",
+          padding: "4px 8px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 8,
+          minHeight: 38,
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => onStatusBarModeChange("compact")}
+          title="显示状态栏"
+          style={{ border: "none", background: "#f1f5f9", color: "#475569", borderRadius: 7, padding: "5px 9px", cursor: "pointer", fontSize: 11, fontWeight: 600 }}
+        >
+          显示状态栏
+        </button>
+        <div style={{ display: "flex", gap: 6, alignItems: "center", overflowX: "auto" }}>
+          <div style={{ display: "inline-flex", background: "#f5f6f8", borderRadius: 7, padding: 2 }}>
+            {PERIODS.map((p) => (
+              <ToggleButton key={p.key} active={period === p.key} onClick={() => onPeriodChange(p.key)} label={p.label} compact />
+            ))}
+          </div>
+          <div style={{ display: "inline-flex", background: "#f5f6f8", borderRadius: 7, padding: 2 }}>
+            <ToggleButton active={viewMode === "detailed"} onClick={() => onViewModeChange("detailed")} label="详细" compact />
+            <ToggleButton active={viewMode === "overview"} onClick={() => onViewModeChange("overview")} label="总览" compact />
+          </div>
+          <button type="button" onClick={onOpenWatchlist} title="编辑自选板块" style={{ border: "none", background: "#f5f6f8", color: "#475569", borderRadius: 7, padding: "5px 8px", cursor: "pointer", fontSize: 12 }}>自选</button>
+        </div>
+      </header>
+    );
+  }
+
   return (
     <header
       style={{
         background: "#ffffff",
         borderBottom: "1px solid #e5e7eb",
-        padding: isMobile ? "8px 12px" : "14px 24px",
+        padding: isMobile ? "8px 12px" : statusBarMode === "full" ? "14px 24px" : "6px 14px",
         display: "flex",
         flexDirection: isMobile ? "column" : "row",
         alignItems: isMobile ? "stretch" : "center",
@@ -155,7 +206,7 @@ export default function Header({
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
             style={{
-              fontSize: isMobile ? 15 : 20,
+              fontSize: isMobile ? 15 : statusBarMode === "full" ? 20 : 16,
               fontWeight: 700,
               color: "#1f2328",
               letterSpacing: 0.2,
@@ -163,7 +214,7 @@ export default function Header({
           >
             加密板块强弱看板
           </div>
-          {!isMobile && (
+          {!isMobile && statusBarMode === "full" && (
             <div style={{ fontSize: 12, color: "#6b7280", marginTop: 3 }}>
               数据日期 {date}（24h 滚动）· 共 {totalSectors} 板块 / {totalCoins} 币种 · {formatGeneratedAt(generatedAt)}
               <span style={{ color: freshnessColor, fontWeight: 600, marginLeft: 8 }}>
@@ -221,7 +272,24 @@ export default function Header({
           >
             ⚙
           </button>
-          {!isMobile && (
+          <button
+            type="button"
+            onClick={cycleStatusBarMode}
+            title={statusBarMode === "full" ? "压缩状态栏" : "隐藏状态栏"}
+            style={{
+              background: "#f5f6f8",
+              border: "none",
+              borderRadius: 8,
+              padding: isMobile ? "6px 8px" : "8px 10px",
+              cursor: "pointer",
+              fontSize: isMobile ? 11 : 12,
+              lineHeight: 1,
+              color: "#6b7280",
+            }}
+          >
+            {statusBarMode === "full" ? "压缩" : "隐藏"}
+          </button>
+          {!isMobile && statusBarMode === "full" && (
             <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, color: "#6b7280" }}>
               <span style={{ width: 6, height: 6, borderRadius: 3, background: statusDotColor }} />
               {backendLabel} · {sourceLabel || "暂无来源"} · {refreshLabel}

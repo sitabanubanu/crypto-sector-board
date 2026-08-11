@@ -2,13 +2,18 @@
 
 > **用途**：让任何人（或下次的 AI 会话）打开 30 秒内能续上项目。
 > **更新频率**：每个阶段切换或重大决策后更新本文件。
-> **更新时间**：2026-08-02
+> **更新时间**：2026-08-11
 >
-> **注意**：本文主体保留早期 MVP 阶段记录。当前修复路线以 `docs/07-complete-repair-plan.md` 为准：P0～P5.1 已发布到 Production；真实持仓、回测和 P6 尚未开始。
+> **注意**：本文主体保留早期 MVP 阶段记录。当前修复路线以 `docs/07-complete-repair-plan.md` 和 `docs/14-p6-priority-assets-and-insights.md` 为准。
 
 ---
 
-## 当前修复进度（2026-08-02）
+## 当前修复进度（2026-08-11）
+
+- P6（优先资产与研究档案）：已完成 11 个资产接入，注册表为 67 assets / 30 aliases / 201 provider mappings / 14 sectors / 67 memberships；板块目录完整覆盖。
+- P6 数据链路：Gate 在线映射 67/67、OKX 显式剔除 4 个当前不存在的现货映射；Preview `db:setup` 成功，744 小时历史补齐成功，quotes 191/191、24h/7d K 线 100%、`data-health` 为 `healthy`。
+- P6 页面：新增板块研究抽屉、币种项目档案、搜索/市场脉搏板块下钻、状态栏 full/compact/hidden 持久化、BTC 视觉权重压缩；桌面与 390×844 移动端控制台无 error/warning。
+- P6 质量门：17 个测试文件、103 项测试、lint、typecheck、registry、migration、生产构建通过；新增 `docs/14-p6-priority-assets-and-insights.md`。
 
 - P0：安全边界、依赖审计和质量门已完成并通过 `npm run check`。
 - P1：数据契约、provider fixtures、指标/快照校验、缓存和 watchlist 状态机已完成并通过测试。

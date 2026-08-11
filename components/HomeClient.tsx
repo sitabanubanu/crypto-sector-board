@@ -7,6 +7,7 @@ import SectorTreemap from "@/components/SectorTreemap";
 import TrendBarChart from "@/components/TrendBarChart";
 import WatchlistEditor from "@/components/WatchlistEditor";
 import CoinDetailModal from "@/components/CoinDetailModal";
+import SectorInsightDrawer from "@/components/SectorInsightDrawer";
 import CorrelationHeatmap from "@/components/CorrelationHeatmap";
 import { useBoardData } from "@/components/board/use-board-data";
 import {
@@ -30,6 +31,7 @@ import { detectAllSignals } from "@/lib/signals";
 import { buildCorrelationMatrix } from "@/lib/correlation";
 import { buildMarketPulse, searchMarket, type MarketSearchResult } from "@/lib/market-pulse";
 import type { PeriodType, WatchlistConfig, CustomSectorConfig, CoinSnapshot } from "@/lib/types";
+import { getAssetInsight, getSectorInsight } from "@/lib/market-insights";
 import type { BoardResponse } from "@/lib/market-data/bff-contracts";
 
 interface Props {
@@ -65,8 +67,30 @@ export default function HomeClient({ initialBoard }: Props) {
   // bottom-left toggle to switch to the board + data split (or chart-only).
   const [mainView, setMainView] = useState<"split" | "chart" | "treemap">("treemap");
   const [selectedCoin, setSelectedCoin] = useState<{ coin: CoinSnapshot; sectorName: string } | null>(null);
+  const [selectedSector, setSelectedSector] = useState<import("@/lib/types").SectorSnapshot | null>(null);
+  const [statusBarMode, setStatusBarMode] = useState<"full" | "compact" | "hidden">("compact");
   const [watchlistOpen, setWatchlistOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      try {
+        const stored = window.localStorage.getItem("crypto-sector-board:status-bar-mode");
+        if (stored === "full" || stored === "compact" || stored === "hidden") {
+          setStatusBarMode(stored);
+        }
+      } catch {
+        // Keep the compact in-memory default when storage is unavailable.
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem("crypto-sector-board:status-bar-mode", statusBarMode);
+    } catch {
+      // Storage is optional; the current state remains authoritative.
+    }
+  }, [statusBarMode]);
   const builtInSectorIdsKey = snapshot.sectors
     .map((sector) => sector.id)
     .join(",");
@@ -228,7 +252,14 @@ export default function HomeClient({ initialBoard }: Props) {
   const handleSearchSelect = useCallback(
     (result: MarketSearchResult) => {
       setSearchQuery(result.label);
-      if (result.kind !== "asset") return;
+      if (result.kind === "sector") {
+        const sector = activeSnapshot.sectors.find((candidate) => candidate.id === result.id);
+        if (sector) {
+          setSelectedCoin(null);
+          setSelectedSector(sector);
+        }
+        return;
+      }
       for (const sector of activeSnapshot.sectors) {
         const coin = sector.coins.find((candidate) => candidate.id === result.id);
         if (coin) {
@@ -239,6 +270,11 @@ export default function HomeClient({ initialBoard }: Props) {
     },
     [activeSnapshot.sectors],
   );
+
+  const handleSectorClick = useCallback((sector: import("@/lib/types").SectorSnapshot) => {
+    setSelectedCoin(null);
+    setSelectedSector(sector);
+  }, []);
 
   // Coin → sector lookup for detail modal
   const coinSector = useMemo(() => {
@@ -301,6 +337,8 @@ export default function HomeClient({ initialBoard }: Props) {
         isMobile={isMobile}
         activePreset={activePreset}
         onPresetChange={handlePresetChange}
+        statusBarMode={statusBarMode}
+        onStatusBarModeChange={setStatusBarMode}
       />
       <MarketPulseBar
         pulse={marketPulse}
@@ -334,6 +372,7 @@ export default function HomeClient({ initialBoard }: Props) {
               highlightedSectorIds={highlightedSectorIds}
               hasSearchHighlight={hasSearchHighlight}
               onCoinClick={(coin, sectorName) => setSelectedCoin({ coin, sectorName })}
+              onSectorClick={handleSectorClick}
             />
           )}
         </div>
@@ -407,8 +446,19 @@ export default function HomeClient({ initialBoard }: Props) {
           coin={selectedCoin.coin}
           sectorName={selectedCoin.sectorName}
           sector={coinSector}
+          insight={getAssetInsight(selectedCoin.coin.id)}
           closes={closesByAssetId.get(selectedCoin.coin.id)}
           onClose={() => setSelectedCoin(null)}
+        />
+      )}
+
+      {selectedSector && (
+        <SectorInsightDrawer
+          sector={selectedSector}
+          insight={getSectorInsight(selectedSector.id)}
+          period={period}
+          isMobile={isMobile}
+          onClose={() => setSelectedSector(null)}
         />
       )}
     </div>

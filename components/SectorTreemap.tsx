@@ -25,6 +25,7 @@ interface Props {
   highlightedSectorIds?: ReadonlySet<string>;
   hasSearchHighlight?: boolean;
   onCoinClick?: (coin: CoinSnapshot, sectorName: string) => void;
+  onSectorClick?: (sector: SectorSnapshot) => void;
 }
 
 interface HoverInfo {
@@ -46,6 +47,7 @@ export default function SectorTreemap({
   highlightedSectorIds,
   hasSearchHighlight = false,
   onCoinClick,
+  onSectorClick,
 }: Props) {
   const [hover, setHover] = useState<HoverInfo | null>(null);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -64,9 +66,12 @@ export default function SectorTreemap({
   };
 
   const root = useMemo(() => {
-    const coinWeight = (marketCap: number | null) => {
+    const coinWeight = (marketCap: number | null, assetId: string) => {
       const safe = Math.max(marketCap ?? 0, 1);
-      return Math.pow(safe, 0.4) + 800;
+      // Use a softer exponent for BTC so one asset does not crowd out the
+      // smaller regions. This changes only visual area, never metrics.
+      const exponent = assetId === "bitcoin" ? 0.3 : 0.4;
+      return Math.pow(safe, exponent) + 800;
     };
 
     const data = {
@@ -77,7 +82,7 @@ export default function SectorTreemap({
         children: sector.coins.map((coin) => ({
           name: coin.symbol,
           coin,
-          value: coinWeight(coin.marketCap),
+          value: coinWeight(coin.marketCap, coin.id),
         })),
       })),
     };
@@ -155,7 +160,21 @@ export default function SectorTreemap({
             const pctSize = Math.max(11, Math.min(20, Math.sqrt(sw * sh) / 10));
             const sig = signals?.get(sector.id);
             return (
-              <g key={sector.id} opacity={sectorOpacity}>
+              <g
+                key={sector.id}
+                opacity={sectorOpacity}
+                role="button"
+                tabIndex={0}
+                aria-label={`${sector.name}板块详情`}
+                onClick={() => onSectorClick?.(sector)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onSectorClick?.(sector);
+                  }
+                }}
+                style={{ cursor: "pointer" }}
+              >
                 <rect
                   x={sectorNode.x0}
                   y={sectorNode.y0}
@@ -217,6 +236,17 @@ export default function SectorTreemap({
                 height={headerHeight}
                 fill={sectorColor}
                 clipPath={`url(#clip-${sector.id})`}
+                role="button"
+                tabIndex={0}
+                aria-label={`${sector.name}板块详情`}
+                onClick={() => onSectorClick?.(sector)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onSectorClick?.(sector);
+                  }
+                }}
+                style={{ cursor: "pointer" }}
               />
               {showSectorLabel && (
                 <text

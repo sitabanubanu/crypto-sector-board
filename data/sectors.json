@@ -1,144 +1,24 @@
 {
   "version": 2,
   "registryVersion": 1,
-  "lastUpdated": "2026-08-02",
+  "lastUpdated": "2026-08-11",
   "effectiveFrom": "2026-05-15",
   "mainStreamThreshold": 300000000,
   "focusAssets": ["bitcoin", "ethereum", "solana"],
   "sectors": [
-    {
-      "id": "btc",
-      "name": "BTC",
-      "assetIds": ["bitcoin"]
-    },
-    {
-      "id": "l1",
-      "name": "Layer 1 主流",
-      "assetIds": [
-        "ethereum",
-        "solana",
-        "binancecoin",
-        "ripple",
-        "cardano",
-        "avalanche-2",
-        "tron",
-        "the-open-network",
-        "polkadot",
-        "sui",
-        "aptos",
-        "near"
-      ]
-    },
-    {
-      "id": "l2",
-      "name": "L2 & 扩容",
-      "assetIds": [
-        "arbitrum",
-        "optimism",
-        "starknet",
-        "mantle",
-        "conflux-token"
-      ]
-    },
-    {
-      "id": "pow",
-      "name": "PoW 老币",
-      "assetIds": [
-        "litecoin",
-        "bitcoin-cash",
-        "ethereum-classic"
-      ]
-    },
-    {
-      "id": "defi",
-      "name": "DeFi",
-      "assetIds": [
-        "aave",
-        "uniswap",
-        "compound-governance-token",
-        "curve-dao-token",
-        "lido-dao",
-        "jupiter-exchange-solana",
-        "ethena",
-        "maker"
-      ]
-    },
-    {
-      "id": "dex-perp",
-      "name": "衍生品 DEX",
-      "assetIds": [
-        "hyperliquid",
-        "dydx-chain",
-        "aster-2"
-      ]
-    },
-    {
-      "id": "ai",
-      "name": "AI",
-      "assetIds": [
-        "bittensor",
-        "fetch-ai",
-        "worldcoin-wld",
-        "virtual-protocol",
-        "render-token"
-      ]
-    },
-    {
-      "id": "depin",
-      "name": "DePIN",
-      "assetIds": [
-        "filecoin",
-        "livepeer",
-        "helium"
-      ]
-    },
-    {
-      "id": "meme",
-      "name": "Memecoin",
-      "assetIds": [
-        "dogecoin",
-        "pepe",
-        "dogwifcoin",
-        "official-trump",
-        "shiba-inu",
-        "bonk",
-        "floki"
-      ]
-    },
-    {
-      "id": "privacy",
-      "name": "隐私币",
-      "assetIds": [
-        "monero",
-        "zcash",
-        "dash"
-      ]
-    },
-    {
-      "id": "rwa",
-      "name": "RWA",
-      "assetIds": ["ondo-finance"]
-    },
-    {
-      "id": "btc-eco",
-      "name": "BTC 生态",
-      "assetIds": [
-        "ordinals",
-        "blockstack"
-      ]
-    },
-    {
-      "id": "infra",
-      "name": "基础设施",
-      "assetIds": [
-        "chainlink",
-        "ethereum-name-service"
-      ]
-    },
-    {
-      "id": "other",
-      "name": "其他主流",
-      "assetIds": ["pi-network"]
-    }
+    {"id":"btc","name":"BTC","assetIds":["bitcoin"]},
+    {"id":"l1","name":"L1 主流","assetIds":["ethereum","solana","binancecoin","ripple","cardano","avalanche-2","tron","the-open-network","polkadot","sui","aptos","near","internet-computer","hedera-hashgraph","cosmos","algorand"]},
+    {"id":"l2","name":"L2 & 扩容","assetIds":["arbitrum","optimism","starknet","mantle","conflux-token","polygon-ecosystem-token"]},
+    {"id":"pow","name":"PoW 老牌","assetIds":["litecoin","bitcoin-cash","ethereum-classic","kaspa"]},
+    {"id":"defi","name":"DeFi","assetIds":["aave","uniswap","compound-governance-token","curve-dao-token","lido-dao","jupiter-exchange-solana","ethena","maker","morpho","pancakeswap-token","aerodrome-finance"]},
+    {"id":"dex-perp","name":"衍生品 DEX","assetIds":["hyperliquid","dydx-chain","aster-2","injective-protocol"]},
+    {"id":"ai","name":"AI","assetIds":["bittensor","fetch-ai","worldcoin-wld","virtual-protocol","render-token"]},
+    {"id":"depin","name":"DePIN","assetIds":["filecoin","livepeer","helium"]},
+    {"id":"meme","name":"Memecoin","assetIds":["dogecoin","pepe","dogwifcoin","official-trump","shiba-inu","bonk","floki"]},
+    {"id":"privacy","name":"隐私币","assetIds":["monero","zcash","dash"]},
+    {"id":"rwa","name":"RWA","assetIds":["ondo-finance"]},
+    {"id":"btc-eco","name":"BTC 生态","assetIds":["ordinals","blockstack"]},
+    {"id":"infra","name":"基础设施","assetIds":["chainlink","ethereum-name-service","quant-network"]},
+    {"id":"other","name":"其他主流","assetIds":["pi-network"]}
   ]
 }

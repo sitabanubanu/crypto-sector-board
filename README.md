@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/readme/hero.svg" width="100%" alt="加密板块强弱看板：用市场广度、板块轮动与 Treemap 观察 56 个资产的结构变化">
+  <img src="./assets/readme/hero.svg" width="100%" alt="加密板块强弱看板：用市场广度、板块轮动与 Treemap 观察 67 个资产的结构变化">
 </p>
 
 <p align="center">
@@ -19,7 +19,7 @@
 
 **先看市场涨得广不广，再看哪些板块正在换挡。**
 
-这是一个面向个人观察的加密市场结构看板。它把 **56 个资产**归入
+这是一个面向个人观察的加密市场结构看板。它把 **67 个资产**归入
 **14 个板块**，每小时汇总 Gate.io、OKX 与 CoinGecko 数据，用市场广度、
 Treemap、板块排名和 **24h / 3d / 7d / 30d** 同口径历史回答“谁强、为什么强、
 强势是否扩散”。面积表示市值权重，颜色遵循中文行情习惯：**红涨、绿跌**。
@@ -30,7 +30,7 @@ Treemap、板块排名和 **24h / 3d / 7d / 30d** 同口径历史回答“谁强
   </a>
 </p>
 
-<p align="center"><sub>Production 实景 · P5.0/P5.1 · 14 个板块 / 56 个资产；行情与排名会随数据刷新变化。</sub></p>
+<p align="center"><sub>Production 实景 · P6 · 14 个板块 / 67 个资产；行情与排名会随数据刷新变化。</sub></p>
 
 ## 它回答的四个问题
 
@@ -48,6 +48,8 @@ Treemap、板块排名和 **24h / 3d / 7d / 30d** 同口径历史回答“谁强
 - **结构视图**：Treemap 同时展示板块与币种，面积对应市值权重，红绿对应涨跌。
 - **四周期对比**：24h、3d、7d、30d 并排；缺失历史保持 `N/A`，不会伪造成 0。
 - **搜索与下钻**：按资产 ID、代码、名称或板块搜索并联动高亮；精确资产可直接打开价格、K 线和成交活跃度详情。
+- **板块/项目研究档案**：点击板块查看市场地位、作用、目标用户、需求代理指标、口径限制和来源；点击币种查看项目用途、需求信号与风险。
+- **看板空间控制**：默认看板优先，可压缩或隐藏状态栏；BTC 使用较柔和的可视权重，给小市值资产保留可见和可点击区域。
 - **相关性矩阵**：显示真实 Pearson 系数与共同样本数，同时明确“历史共同波动不代表因果”。
 - **数据可信度**：页面暴露 backend、source、freshness、coverage 与 fallback；健康接口独立报告 provider、K 线和 quote 状态。
 
@@ -65,9 +67,9 @@ Treemap、板块排名和 **24h / 3d / 7d / 30d** 同口径历史回答“谁强
 
 ## 工程与发布状态
 
-- P0～P5.1 已进入 GitHub `main` 和 Vercel Production。
-- 56 个规范资产、20 个别名、168 条 provider 状态和 14 个板块均通过注册表检查。
-- 当前质量门包含 16 个测试文件、100 项测试、lint、TypeScript、migration、依赖审计与 Production build。
+- P0～P5.1 已进入 GitHub `main` 和 Vercel Production；P6 优先资产与研究档案正在同步 Preview/Production。
+- 67 个规范资产、30 个别名、201 条 provider 状态和 14 个板块均通过注册表检查；OKX 不可用的映射会显式标记，不伪造数据。
+- 当前质量门包含 17 个测试文件、103 项测试、lint、TypeScript、migration、依赖审计与 Production build。
 - `/api/v1/board` 默认从 PostgreSQL 读取，并与最后一份有效 JSON 做可选双读比较。
 - `.github/workflows/ingest.yml` 每小时只写数据库；Production 通过独立的手动部署 workflow 发布。
 
@@ -148,8 +150,8 @@ npm run check
 
 ```text
 app/api/v1/          board / candles / history / data-health
-components/          市场脉搏、Treemap、趋势图、详情和相关性
-data/                资产注册表、板块配置和只读快照
+  components/          市场脉搏、Treemap、趋势图、详情、研究档案和相关性
+  data/                资产注册表、板块配置、研究档案和只读快照
 drizzle/             PostgreSQL migrations
 lib/db/              schema、连接、seed 和查询
 lib/ingestion/       provider adapter、补洞、重试和健康报告
@@ -193,6 +195,7 @@ Production：[crypto-sector-board.vercel.app](https://crypto-sector-board.vercel
 - [P4 BFF 与页面切换](./docs/11-p4-bff-and-page-cutover.md)
 - [P5.0/P5.1 市场脉搏实施计划](./docs/12-p5-market-pulse.md)
 - [数据采集与健康告警修复任务书](./docs/13-data-pipeline-alert-repair-taskbook.md)
+- [P6 优先资产与板块研究档案](./docs/14-p6-priority-assets-and-insights.md)
 
 ## 许可证
 

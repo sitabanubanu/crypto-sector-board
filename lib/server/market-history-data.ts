@@ -317,10 +317,10 @@ export async function getHistoryResponse(
   days: number,
 ): Promise<HistoryResponse> {
   const assetIds = [...new Set(requestedAssetIds)].sort();
-  if (assetIds.length === 0 || assetIds.length > 56) {
+  if (assetIds.length === 0 || assetIds.length > 67) {
     throw new PublicDataQueryError(
       "INVALID_ASSET_COUNT",
-      "Request between 1 and 56 unique assets.",
+      "Request between 1 and 67 unique assets.",
     );
   }
   const unknown = assetIds.filter((assetId) => !getAssetDefinition(assetId));

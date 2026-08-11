@@ -33,10 +33,10 @@ describe.sequential("P2 PostgreSQL migration", () => {
     const second = await seedReferenceData(database);
 
     expect(first).toEqual(second);
-    expect(first.assets).toBe(56);
-    expect(first.providerInstruments).toBe(168);
+    expect(first.assets).toBe(67);
+    expect(first.providerInstruments).toBe(201);
     expect(first.sectors).toBe(14);
-    expect(first.sectorMemberships).toBe(56);
+    expect(first.sectorMemberships).toBe(67);
 
     const [assetCount] = await database
       .select({ value: count() })
@@ -51,10 +51,10 @@ describe.sequential("P2 PostgreSQL migration", () => {
       .select({ value: count() })
       .from(sectorMemberships);
 
-    expect(assetCount.value).toBe(56);
-    expect(mappingCount.value).toBe(168);
+    expect(assetCount.value).toBe(67);
+    expect(mappingCount.value).toBe(201);
     expect(sectorCount.value).toBe(14);
-    expect(membershipCount.value).toBe(56);
+    expect(membershipCount.value).toBe(67);
   }, 30_000);
 
   it("enforces ingestion dedupe keys", async () => {

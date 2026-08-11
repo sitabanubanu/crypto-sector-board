@@ -16,11 +16,11 @@ import {
 import { auditProviderMappings } from "../lib/market-data/mapping-audit";
 
 describe("canonical asset registry", () => {
-  it("covers all 56 configured assets with three explicit provider states", () => {
-    assertCompleteSectorCoverage(56);
-    expect(assetRegistry.assets).toHaveLength(56);
-    expect(getCanonicalAssetIds()).toHaveLength(56);
-    expect(buildProviderInstrumentRows()).toHaveLength(168);
+  it("covers all 67 configured assets with three explicit provider states", () => {
+    assertCompleteSectorCoverage(67);
+    expect(assetRegistry.assets).toHaveLength(67);
+    expect(getCanonicalAssetIds()).toHaveLength(67);
+    expect(buildProviderInstrumentRows()).toHaveLength(201);
     expect(sectorCatalog.sectors).toHaveLength(14);
 
     for (const asset of assetRegistry.assets) {
@@ -77,7 +77,7 @@ describe("canonical asset registry", () => {
   it("replaces the duplicated exchange maps without changing active behavior", () => {
     const gate = createProviderInstrumentMap("gate");
     const okx = createProviderInstrumentMap("okx");
-    expect(Object.keys(gate)).toHaveLength(56);
+    expect(Object.keys(gate)).toHaveLength(67);
     expect(gate.bitcoin).toBe("BTC_USDT");
     expect(okx.bitcoin).toBe("BTC-USDT");
     expect(gate.maker).toBeNull();
