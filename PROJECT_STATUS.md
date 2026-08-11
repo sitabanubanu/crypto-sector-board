@@ -14,7 +14,7 @@
 - P6 数据链路：Gate 在线映射 67/67、OKX 显式剔除 4 个当前不存在的现货映射；共享 Neon Free 数据库已完成 Preview/Production 幂等迁移与 seed，744 小时历史补齐成功，quotes 191/191、24h/7d K 线 100%、`data-health` 为 `healthy`。
 - P6 页面：新增板块研究抽屉、币种项目档案、搜索/市场脉搏板块下钻、状态栏 full/compact/hidden 持久化、BTC 视觉权重压缩；桌面与 390×844 移动端控制台无 error/warning。
 - P6 质量门：17 个测试文件、103 项测试、lint、typecheck、registry、migration、生产构建通过；新增 `docs/14-p6-priority-assets-and-insights.md`。
-- P6 发布：提交 `5c2289e` 已推送 GitHub `main`；Preview deployment `dpl_5RVcoc6Kd3VKkfzqznuWpgVvxmWy` 与 Production deployment `dpl_CmBQ7sTJ6eoVvX3SjnCqz1kqeVfr` 均为 Ready，正式入口为 `https://crypto-sector-board.vercel.app`。
+- P6 发布：提交 `9d77405` 已推送 GitHub `main`；Preview deployment `dpl_5RVcoc6Kd3VKkfzqznuWpgVvxmWy` 与 Production deployment `dpl_73JEpWkXcG7Pd8fUhQBnYhwiRiNL` 均为 Ready，正式入口为 `https://crypto-sector-board.vercel.app`。
 
 - P0：安全边界、依赖审计和质量门已完成并通过 `npm run check`。
 - P1：数据契约、provider fixtures、指标/快照校验、缓存和 watchlist 状态机已完成并通过测试。

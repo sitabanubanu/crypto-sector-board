@@ -36,7 +36,7 @@ Production 使用同一套已授权的 Neon Free 连接完成幂等迁移与 see
 | `/api/v1/data-health` | `healthy` |
 | quotes | 191/191，freshness `1` |
 | 24h/7d candle gaps | 0 |
-| Production deployment | `dpl_CmBQ7sTJ6eoVvX3SjnCqz1kqeVfr` |
+| Production deployment | `dpl_73JEpWkXcG7Pd8fUhQBnYhwiRiNL` |
 | 正式入口 | <https://crypto-sector-board.vercel.app> |
 
 ## 后续维护规则
