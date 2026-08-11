@@ -66,13 +66,23 @@ export default function SectorTreemap({
   };
 
   const root = useMemo(() => {
+    const baseCoinWeight = (marketCap: number | null) =>
+      Math.pow(Math.max(marketCap ?? 0, 1), 0.4) + 800;
+    const ethereum = snapshot.sectors
+      .flatMap((sector) => sector.coins)
+      .find((coin) => coin.id === "ethereum");
+    const ethereumWeight = ethereum ? baseCoinWeight(ethereum.marketCap) : null;
+
     const coinWeight = (marketCap: number | null, assetId: string) => {
       const safe = Math.max(marketCap ?? 0, 1);
-      // Use a slightly softer exponent for BTC so one asset does not crowd
-      // out smaller regions while remaining clearly visible and clickable.
+      const naturalWeight = Math.pow(safe, 0.4) + 800;
+      if (assetId !== "bitcoin") return naturalWeight;
+
+      // Compress BTC to 60% of its natural visual weight, but keep it
+      // slightly larger than ETH so the market benchmark never disappears.
       // This changes only visual area, never metrics.
-      const exponent = assetId === "bitcoin" ? 0.35 : 0.4;
-      return Math.pow(safe, exponent) + 800;
+      const compressedWeight = naturalWeight * 0.6;
+      return Math.max(compressedWeight, (ethereumWeight ?? 0) * 1.08);
     };
 
     const data = {
