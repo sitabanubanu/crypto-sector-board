@@ -67,7 +67,7 @@ Treemap、板块排名和 **24h / 3d / 7d / 30d** 同口径历史回答“谁强
 
 ## 工程与发布状态
 
-- P0～P5.1 已进入 GitHub `main` 和 Vercel Production；P6 优先资产与研究档案正在同步 Preview/Production。
+- P0～P6 已进入 GitHub `main` 和 Vercel Production；P6 优先资产与研究档案已同步 Preview/Production。
 - 67 个规范资产、30 个别名、201 条 provider 状态和 14 个板块均通过注册表检查；OKX 不可用的映射会显式标记，不伪造数据。
 - 当前质量门包含 17 个测试文件、103 项测试、lint、TypeScript、migration、依赖审计与 Production build。
 - `/api/v1/board` 默认从 PostgreSQL 读取，并与最后一份有效 JSON 做可选双读比较。
