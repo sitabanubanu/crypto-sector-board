@@ -61,7 +61,9 @@ export default function HomeClient({ initialBoard }: Props) {
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [viewMode, setViewMode] = useState<"detailed" | "overview">("detailed");
   const [period, setPeriod] = useState<PeriodType>("24h");
-  const [mainView, setMainView] = useState<"split" | "chart" | "treemap">("split");
+  // Start with the board as the primary full-height view. Users can use the
+  // bottom-left toggle to switch to the board + data split (or chart-only).
+  const [mainView, setMainView] = useState<"split" | "chart" | "treemap">("treemap");
   const [selectedCoin, setSelectedCoin] = useState<{ coin: CoinSnapshot; sectorName: string } | null>(null);
   const [watchlistOpen, setWatchlistOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -378,7 +380,7 @@ export default function HomeClient({ initialBoard }: Props) {
             zIndex: 10,
           }}
         >
-          {mainView === "split" ? "▣ 柱状图全屏" : mainView === "chart" ? "▦ 板块全屏" : "⊞ 分屏"}
+          {mainView === "split" ? "▣ 柱状图全屏" : mainView === "chart" ? "▦ 板块全屏" : "⊞ 看板 + 数据"}
         </button>
       </div>
 
