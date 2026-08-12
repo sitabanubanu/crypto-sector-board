@@ -344,15 +344,17 @@ export default function HomeClient({ initialBoard }: Props) {
         statusBarMode={statusBarMode}
         onStatusBarModeChange={setStatusBarMode}
       />
-      <MarketPulseBar
-        pulse={marketPulse}
-        signals={signals}
-        query={searchQuery}
-        searchResults={searchResults}
-        isMobile={isMobile}
-        onQueryChange={setSearchQuery}
-        onSelectResult={handleSearchSelect}
-      />
+      {statusBarMode !== "hidden" && (
+        <MarketPulseBar
+          pulse={marketPulse}
+          signals={signals}
+          query={searchQuery}
+          searchResults={searchResults}
+          isMobile={isMobile}
+          onQueryChange={setSearchQuery}
+          onSelectResult={handleSearchSelect}
+        />
+      )}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, position: "relative" }}>
         <div
           ref={containerRef}
