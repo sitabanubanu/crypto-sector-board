@@ -41,9 +41,9 @@ npm run data:health
 npm run db:import-legacy
 ```
 
-采集器会重试 429、5xx、网络错误和超时，并用数据库键抵抗重复投递。GitHub Actions 的采集 workflow 在每小时 UTC `:17` 和 `:47` 各提供一次机会；同一小时重复任务会被 `ingestion_runs.dedupe_key` 安全跳过。每次 workflow 最多执行两次补偿重试，已经成功落库的资产不会回滚。
+采集器会重试 429、5xx、网络错误和超时，并用数据库键抵抗重复投递。GitHub Actions 的采集 workflow 在每小时 UTC `:17` 和 `:47` 各提供一次机会；同一小时已经成功的任务会被 `ingestion_runs.dedupe_key` 安全跳过，`failed` 或 `partial` 任务则允许下一次尝试接管并补齐。每次 workflow 最多执行两次补偿重试，已经成功落库的资产不会回滚。
 
-健康 workflow 每天 `05:23 UTC` 执行，并在失败时最多等待两次重试。K 线健康窗口默认排除最新一个可能尚未完全落库的闭合小时；报价新鲜度仍按当前时间计算，超过 2 小时未更新会判定为 `critical`。报告中的 `coverageAsOf`、`latestCandleAt`、`candleLagHours`、`latestQuoteAt` 和 `missingBucketCount` 用于区分正常结算延迟与真实数据中断。
+健康 workflow 每天 `05:23 UTC` 执行，并在失败时最多等待两次重试。K 线健康窗口默认排除最新一个可能尚未完全落库的闭合小时；报价新鲜度仍按当前时间计算，超过 2 小时未更新会判定为 `critical`。`failures24h` 统计数据库中过去 24 小时仍保存为 `failed` 或 `partial` 的运行记录，`unresolvedFailures` 才表示各 provider/task/timeframe 数据流当前仍未恢复；同一数据流后续成功后，旧故障不会继续把整体状态卡在 `degraded`。报告中的 `coverageAsOf`、`latestCandleAt`、`candleLagHours`、`latestQuoteAt`、`missingBucketCount` 和 `failedAssets` 用于区分正常结算延迟、已恢复事件与真实数据中断。
 
 需要一次性补 31 天小时历史时，在 PowerShell 中运行：
 

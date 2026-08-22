@@ -186,17 +186,18 @@ describe.sequential("P3 ingestion service", () => {
     expect(rows.value).toBe(11);
   });
 
-  test("keeps successful assets when one provider request fails", async () => {
+  test("retries a partial candle bucket and keeps successful assets", async () => {
+    const options = {
+      assetIds,
+      now: new Date("2026-07-30T13:34:00.000Z"),
+      initialBackfillHours: 24,
+      repairLookbackHours: 2,
+      maxBackfillHours: 48,
+    };
     const result = await runCandleIngestion(
       database,
       fakeAdapter("gate", "ethereum"),
-      {
-        assetIds,
-        now: new Date("2026-07-30T13:34:00.000Z"),
-        initialBackfillHours: 24,
-        repairLookbackHours: 2,
-        maxBackfillHours: 48,
-      },
+      options,
     );
     expect(result.status).toBe("partial");
     expect(result.acceptedCount).toBeGreaterThan(0);
@@ -207,6 +208,30 @@ describe.sequential("P3 ingestion service", () => {
       .from(ingestionRuns)
       .where(eq(ingestionRuns.dedupeKey, "market-candles:gate:1h:2026-07-30T13:00:00.000Z"));
     expect(run.status).toBe("partial");
+
+    const recovered = await runCandleIngestion(
+      database,
+      fakeAdapter("gate"),
+      options,
+    );
+    expect(recovered.status).toBe("success");
+    expect(recovered.rejectedCount).toBe(0);
+    const [recoveredRun] = await database
+      .select()
+      .from(ingestionRuns)
+      .where(eq(ingestionRuns.dedupeKey, "market-candles:gate:1h:2026-07-30T13:00:00.000Z"));
+    expect(recoveredRun).toMatchObject({
+      status: "success",
+      rejectedCount: 0,
+      errorSummary: [],
+    });
+
+    const duplicate = await runCandleIngestion(
+      database,
+      fakeAdapter("gate"),
+      options,
+    );
+    expect(duplicate.status).toBe("skipped_duplicate");
   });
 
   test("allows a fully failed bucket to be claimed once for recovery", async () => {
@@ -572,6 +597,140 @@ describe.sequential("P3 ingestion service", () => {
         expect(report.latestCandleAt).toBe("2026-07-31T02:00:00.000Z");
         expect(report.candleLagHours).toBe(1);
         expect(report.quoteLagMinutes).toBe(60);
+      } finally {
+        await isolatedClient.close();
+      }
+    },
+    30_000,
+  );
+
+  test(
+    "clears a recovered provider failure without erasing its 24h event count",
+    async () => {
+      const isolatedClient = new PGlite();
+      const isolatedDatabase = drizzle(isolatedClient, { schema });
+      const ingestionNow = new Date("2026-08-22T03:34:00.000Z");
+      const healthNow = new Date("2026-08-22T04:34:00.000Z");
+      try {
+        await migrate(isolatedDatabase, { migrationsFolder: "drizzle" });
+        await seedReferenceData(isolatedDatabase);
+
+        const results = await runMarketIngestion(
+          isolatedDatabase,
+          {
+            quotes: [
+              fakeQuoteAdapter("coingecko", {
+                observedAt: ingestionNow.toISOString(),
+                price: 100,
+                volume24h: 1,
+              }),
+              fakeQuoteAdapter("gate", {
+                observedAt: ingestionNow.toISOString(),
+                price: 100,
+                volume24h: 1,
+              }),
+              fakeQuoteAdapter("okx", {
+                observedAt: ingestionNow.toISOString(),
+                price: 100,
+                volume24h: 1,
+              }),
+            ],
+            candles: [fakeAdapter("gate"), fakeAdapter("okx")],
+          },
+          {
+            quotes: { now: ingestionNow },
+            candles: {
+              now: ingestionNow,
+              initialBackfillHours: 24,
+              repairLookbackHours: 24,
+              maxBackfillHours: 48,
+            },
+          },
+        );
+        expect(results.every((result) => result.status === "success")).toBe(
+          true,
+        );
+
+        await isolatedDatabase.update(ingestionRuns).set({
+          startedAt: new Date("2026-08-22T03:00:00.000Z"),
+          finishedAt: new Date("2026-08-22T03:01:00.000Z"),
+        });
+        await isolatedDatabase.insert(ingestionRuns).values({
+          dedupeKey: "health-test:okx:partial",
+          task: "market-candles",
+          provider: "okx",
+          timeframe: "1h",
+          status: "partial",
+          requestedCount: 59,
+          acceptedCount: 57,
+          rejectedCount: 2,
+          coverageRatio: 57 / 59,
+          errorSummary: [
+            { assetId: "aave", code: "candle_gap" },
+            { assetId: "algorand", code: "candle_gap" },
+          ],
+          startedAt: new Date("2026-08-22T03:10:00.000Z"),
+          finishedAt: new Date("2026-08-22T03:11:00.000Z"),
+        });
+
+        const degraded = await getDataHealthReport(
+          isolatedDatabase,
+          healthNow,
+        );
+        expect(degraded.status).toBe("degraded");
+        expect(degraded.failedAssets).toEqual(["aave", "algorand"]);
+        expect(
+          degraded.providers.find(
+            (provider) => provider.provider === "okx",
+          ),
+        ).toMatchObject({ failures24h: 1, unresolvedFailures: 1 });
+
+        await isolatedDatabase.insert(ingestionRuns).values({
+          dedupeKey: "health-test:okx:unrelated-quote-success",
+          task: "market-quotes",
+          provider: "okx",
+          timeframe: null,
+          status: "success",
+          requestedCount: 59,
+          acceptedCount: 59,
+          rejectedCount: 0,
+          coverageRatio: 1,
+          errorSummary: [],
+          startedAt: new Date("2026-08-22T03:15:00.000Z"),
+          finishedAt: new Date("2026-08-22T03:16:00.000Z"),
+        });
+        const unrelatedRecovery = await getDataHealthReport(
+          isolatedDatabase,
+          healthNow,
+        );
+        expect(unrelatedRecovery.status).toBe("degraded");
+
+        await isolatedDatabase.insert(ingestionRuns).values({
+          dedupeKey: "health-test:okx:recovered",
+          task: "market-candles",
+          provider: "okx",
+          timeframe: "1h",
+          status: "success",
+          requestedCount: 59,
+          acceptedCount: 59,
+          rejectedCount: 0,
+          coverageRatio: 1,
+          errorSummary: [],
+          startedAt: new Date("2026-08-22T03:20:00.000Z"),
+          finishedAt: new Date("2026-08-22T03:21:00.000Z"),
+        });
+
+        const recovered = await getDataHealthReport(
+          isolatedDatabase,
+          healthNow,
+        );
+        expect(recovered.status).toBe("healthy");
+        expect(recovered.failedAssets).toEqual([]);
+        expect(
+          recovered.providers.find(
+            (provider) => provider.provider === "okx",
+          ),
+        ).toMatchObject({ failures24h: 1, unresolvedFailures: 0 });
       } finally {
         await isolatedClient.close();
       }

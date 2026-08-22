@@ -58,6 +58,7 @@ export interface DataHealthReport {
     successStale: boolean;
     stuckRuns: number;
     failures24h: number;
+    unresolvedFailures: number;
     rateLimits24h: number;
     serverErrors24h: number;
   }>;
@@ -309,16 +310,33 @@ export async function getDataHealthReport<
   const operationalRuns = runs.filter(
     (run) => run.task !== "market-candles-history",
   );
+  const latestCompletedRunByStream = new Map<
+    string,
+    (typeof operationalRuns)[number]
+  >();
+  for (const run of operationalRuns) {
+    if (
+      run.provider == null ||
+      !LIVE_PROVIDERS.includes(run.provider as IngestionProvider) ||
+      run.status === "running" ||
+      run.status === "skipped_duplicate"
+    ) {
+      continue;
+    }
+    const streamKey = `${run.provider}:${run.task}:${run.timeframe ?? "none"}`;
+    // The query is newest-first, so the first completed row is the current
+    // state of this provider/task/timeframe stream. Older failures remain in
+    // the event counters but must not override a later successful recovery.
+    if (!latestCompletedRunByStream.has(streamKey)) {
+      latestCompletedRunByStream.set(streamKey, run);
+    }
+  }
+  const unresolvedFailedRuns = [...latestCompletedRunByStream.values()].filter(
+    (run) => run.status === "failed" || run.status === "partial",
+  );
   const failedAssets = [
     ...new Set(
-      operationalRuns
-        .filter(
-          (run) =>
-            run.provider != null &&
-            LIVE_PROVIDERS.includes(
-              run.provider as IngestionProvider,
-            ),
-        )
+      unresolvedFailedRuns
         .flatMap((run) =>
           run.errorSummary.flatMap((error) =>
             typeof error.assetId === "string" ? [error.assetId] : [],
@@ -411,13 +429,16 @@ export async function getDataHealthReport<
         (run) => run.provider === provider,
       ).length,
       failures24h,
+      unresolvedFailures: unresolvedFailedRuns.filter(
+        (run) => run.provider === provider,
+      ).length,
       rateLimits24h: (errors24h.match(/HTTP 429/g) ?? []).length,
       serverErrors24h: (errors24h.match(/HTTP 5\d\d/g) ?? []).length,
     };
   });
 
-  const hasRecentFailure = providerReports.some(
-    (provider) => provider.failures24h > 0,
+  const hasUnresolvedFailure = providerReports.some(
+    (provider) => provider.unresolvedFailures > 0,
   );
   const hasStaleProvider = providerReports.some(
     (provider) => provider.successStale,
@@ -435,7 +456,7 @@ export async function getDataHealthReport<
       : last24h.coverageRatio < 0.95 ||
           quoteFreshnessRatio < 0.95 ||
           fallbackQuoteCount > 0 ||
-          hasRecentFailure ||
+          hasUnresolvedFailure ||
           hasStaleProvider ||
           hasStaleMapping ||
           hasStuckRun ||

@@ -155,9 +155,10 @@ async function startRun<TResult extends PgQueryResultHKT>(
     .returning({ runId: ingestionRuns.runId });
   if (row) return row.runId;
 
-  // A completed/currently-running bucket stays locked. Failed buckets and
-  // runs abandoned for longer than the workflow timeout can be reclaimed by
-  // compare-and-set. Candle/quote upserts still protect partial writes.
+  // A successful/currently-running bucket stays locked. Failed and partial
+  // buckets, plus runs abandoned beyond the workflow timeout, can be
+  // reclaimed by compare-and-set. Candle/quote upserts protect partial data
+  // that was already written by an earlier attempt.
   const staleRunBefore = new Date(Date.now() - STALE_RUN_AFTER_MS);
   const [retry] = await database
     .update(ingestionRuns)
@@ -178,6 +179,7 @@ async function startRun<TResult extends PgQueryResultHKT>(
         eq(ingestionRuns.dedupeKey, values.dedupeKey),
         or(
           eq(ingestionRuns.status, "failed"),
+          eq(ingestionRuns.status, "partial"),
           and(
             eq(ingestionRuns.status, "running"),
             lt(ingestionRuns.startedAt, staleRunBefore),
