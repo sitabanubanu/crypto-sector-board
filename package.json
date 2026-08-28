@@ -19,6 +19,7 @@
     "db:import-legacy": "tsx scripts/import-legacy-snapshots.ts",
     "ingest-market-data": "tsx scripts/ingest-market-data.ts",
     "data:health": "tsx scripts/data-health.ts",
+    "data:repair": "tsx scripts/repair-market-data.ts",
     "registry:check": "tsx scripts/check-registry.ts",
     "registry:verify": "tsx scripts/verify-provider-mappings.ts",
     "audit:prod": "npm audit --omit=dev --audit-level=high",

@@ -36,6 +36,7 @@ Vercel 通过 Marketplace Storage 接入 PostgreSQL，并只注入服务端 `DAT
 npm run db:migrate
 npm run ingest-market-data
 npm run data:health
+npm run data:repair
 
 # 旧 JSON 只做幂等迁移
 npm run db:import-legacy
@@ -43,7 +44,9 @@ npm run db:import-legacy
 
 采集器会重试 429、5xx、网络错误和超时，并用数据库键抵抗重复投递。GitHub Actions 的采集 workflow 在每小时 UTC `:17` 和 `:47` 各提供一次机会；同一小时已经成功的任务会被 `ingestion_runs.dedupe_key` 安全跳过，`failed` 或 `partial` 任务则允许下一次尝试接管并补齐。每次 workflow 最多执行两次补偿重试，已经成功落库的资产不会回滚。
 
-健康 workflow 每天 `05:23 UTC` 执行，并在失败时最多等待两次重试。K 线健康窗口默认排除最新一个可能尚未完全落库的闭合小时；报价新鲜度仍按当前时间计算，超过 2 小时未更新会判定为 `critical`。`failures24h` 统计数据库中过去 24 小时仍保存为 `failed` 或 `partial` 的运行记录，`unresolvedFailures` 才表示各 provider/task/timeframe 数据流当前仍未恢复；同一数据流后续成功后，旧故障不会继续把整体状态卡在 `degraded`。报告中的 `coverageAsOf`、`latestCandleAt`、`candleLagHours`、`latestQuoteAt`、`missingBucketCount` 和 `failedAssets` 用于区分正常结算延迟、已恢复事件与真实数据中断。
+健康 workflow 每天 `05:23 UTC` 执行。它会先检查健康，发现 `degraded` 或 `critical` 后立即运行一次真实采集，再次检查；只有采集失败或复检仍不健康时才以非零状态退出。`npm run data:repair` 可在本地或运维终端执行同一恢复流程。K 线健康窗口默认排除最新一个可能尚未完全落库的闭合小时；报价新鲜度仍按当前时间计算，超过 2 小时未更新会判定为 `critical`。`failures24h` 统计数据库中过去 24 小时仍保存为 `failed` 或 `partial` 的运行记录，`unresolvedFailures` 才表示各 provider/task/timeframe 数据流当前仍未恢复；同一数据流后续成功后，旧故障不会继续把整体状态卡在 `degraded`。报告中的 `coverageAsOf`、`latestCandleAt`、`candleLagHours`、`latestQuoteAt`、`missingBucketCount` 和 `failedAssets` 用于区分正常结算延迟、已恢复事件与真实数据中断。
+
+Vercel 另有一个每天 `06:11 UTC` 的独立安全网。`/api/cron/market-data` 只接受 `Authorization: Bearer <CRON_SECRET>`；它会复用同一恢复流程，数据健康时不写库，异常时才采集并复检。Hobby Cron 最多每天一次且不保证分钟级准点，因此不能替代 GitHub 主采集，只用于降低两个 GitHub schedule 同时漏跑后的恢复时间。
 
 需要一次性补 31 天小时历史时，在 PowerShell 中运行：
 
@@ -65,6 +68,7 @@ Remove-Item Env:INGEST_HISTORY_BACKFILL_HOURS
 | `DATA_BACKEND` | `db` | `db` 读 PostgreSQL；`json` 走回滚快照 |
 | `DATA_DUAL_READ` | `true` | DB 模式下附带 DB/JSON 差异元数据 |
 | `DATABASE_POOL_MAX` | `1` | serverless 单实例连接上限 |
+| `CRON_SECRET` | 长随机值，仅 Production | Vercel 每日恢复入口认证；不得写入仓库或日志 |
 
 本地或部署后检查：
 
@@ -89,6 +93,7 @@ curl http://localhost:3000/api/v1/data-health
 - Vercel 保持 Hobby；不升级套餐。
 - Production 与 Preview 暂时共用现有 Neon Free 数据库。
 - GitHub Actions 的 `INGEST_DATABASE_URL` 也写入这套共享数据库。
+- Vercel Hobby 保留每天一次的免费恢复 Cron，不升级套餐、不增加第三方调度服务。
 - 不创建第二套付费 PostgreSQL，不复制连接串到客户端或仓库。
 
 这意味着 Preview 的迁移、seed、导入和手动采集都会影响 Production 数据。当前页面和 BFF 以只读为主，因此可接受该折中；一旦开放给其他用户、加入管理写操作或开始商业使用，必须先建立独立 Production 数据库、备份/恢复流程和单独凭据，再迁移流量。任何套餐升级或新资源创建都要重新确认费用。
@@ -115,7 +120,7 @@ JSON 模式会完全绕过数据库，`DATA_DUAL_READ` 在该模式下自动失�
 - `Market Data Ingestion` 只应有仓库读取权限，不应含 `git push` 或 Vercel 部署。
 - 采集 workflow 的正常调度点是每小时 UTC `:17` 和 `:47`；GitHub schedule 可能延迟，因此先看最近一次成功的 `ingestion_runs`，再判断是否需要手动补采。
 - `Data Health` 的 `healthy` 报告应包含 `missingBucketCount=0`；若只有最新闭合小时延迟，不应直接判定为 `critical`。
-- 手动恢复顺序：先运行 `Market Data Ingestion`，等待成功后再运行 `Data Health`；不要先降低告警阈值。
+- 手动恢复优先直接运行 `Data Health`；新流程会在异常时自动采集并复检。若 workflow 本身无法启动，再单独运行 `Market Data Ingestion` 后检查 `/api/v1/data-health`。不要先降低告警阈值。
 - `DATABASE_URL is required`：检查 repository secret `INGEST_DATABASE_URL`。
 - CoinGecko 429：等待退避重试；持续发生时检查配额。
 - 单币失败：检查对应 `ingestion_runs`；其他资产应已落库且本次为 `partial`。
@@ -127,6 +132,7 @@ JSON 模式会完全绕过数据库，`DATA_DUAL_READ` 在该模式下自动失�
 
 - 部署前本地执行 `npm run check`。
 - Preview 必须存在 `DATABASE_URL`、`DATA_BACKEND=db`、`DATA_DUAL_READ=true`。
+- Production 必须存在非空 `CRON_SECRET`；缺失或不匹配时 `/api/cron/market-data` 必须返回 401，且不能访问数据库。
 - Deployment Protection 开启时，匿名浏览器会跳到 Vercel 登录页；使用 `vercel curl` 验证受保护的 Preview API。
 - 数据库迁移和 seed 不在 build 中运行；新数据库先显式执行 `npm run db:setup`。
 - 默认生产环境不得复用 Preview 数据库。当前个人零成本部署是已记录的临时例外；执行 Preview migration、seed、导入或清理前，要按 Production 变更处理。
@@ -145,8 +151,8 @@ GitHub Actions 手动运行 `Deploy Production`。该 workflow 只在 `workflow_
 npx vercel deploy --prod --yes
 ```
 
-发布后至少复验主页、`/api/v1/board`、`/api/v1/history` 和
-`/api/v1/data-health`；不要在日志或文档中输出数据库连接串、Vercel token 或 Telegram token。
+发布后至少复验主页、`/api/v1/board`、`/api/v1/history`、
+`/api/v1/data-health` 和受保护的 `/api/cron/market-data`。未授权 Cron 请求应返回 401；授权请求应返回 200，或在真实恢复失败时返回 503。不要在日志或文档中输出数据库连接串、Cron secret、Vercel token 或 Telegram token。
 
 ## 8. 常见数据问题
 
@@ -154,7 +160,7 @@ npx vercel deploy --prod --yes
 |---|---|---|
 | 页面显示暂无数据 | 数据库连接失败或 board 聚合失败 | 看部署日志和 data-health；必要时切 `DATA_BACKEND=json` |
 | 单币是 `N/A` | provider 下架、映射 unavailable 或 coverage 不足 | 运行 `registry:verify`，核对 `data/assets.json`，不要伪造 0 |
-| 小时 K 线有缺口 | workflow 漏跑或单 provider 失败 | 重触发采集，游标会补洞，再运行 `data:health` |
+| 小时 K 线有缺口 | workflow 漏跑或单 provider 失败 | 运行 `data:repair`，它会补洞并复检；仍失败时查看 provider 摘要 |
 | 31 天历史少于 31 点 | 上市较晚、历史源不完整或无交易所映射 | 查看 history 的 missing/coverage/source |
 | 板块加权异常 | 市值缺失、陈旧或覆盖不足 | 检查 board provenance、market caps 和 coverage |
 | DB/JSON 差异突然放大 | 数据口径、provider 选择或快照过旧 | 先看 dual-read 明细，再决定继续 DB 或临时回滚 |

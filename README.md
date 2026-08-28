@@ -115,6 +115,7 @@ npm run dev
 npm run db:setup
 npm run ingest-market-data
 npm run data:health
+npm run data:repair
 ```
 
 ### 质量门
@@ -140,6 +141,7 @@ npm run check
 | `INGEST_REPAIR_LOOKBACK_HOURS` | 内部缺口检查窗口 |
 | `INGEST_MAX_BACKFILL_HOURS` | 单次自动补洞上限 |
 | `INGEST_HISTORY_BACKFILL_HOURS` | 一次性深历史补齐；不得写入定时 workflow |
+| `CRON_SECRET` | Vercel 每日恢复 Cron 的 Bearer token，只配置在服务端 Production |
 
 完整示例见 [`.env.example`](./.env.example)。
 
@@ -150,6 +152,7 @@ npm run check
 
 ```text
 app/api/v1/          board / candles / history / data-health
+app/api/cron/        受 CRON_SECRET 保护的每日数据恢复入口
   components/          市场脉搏、Treemap、趋势图、详情、研究档案和相关性
   data/                资产注册表、板块配置、研究档案和只读快照
 drizzle/             PostgreSQL migrations
@@ -169,7 +172,8 @@ tests/               契约、路由、指标、数据库、采集和市场脉�
 - **代码发布**：先让 `npm run check` 与 GitHub Quality workflow 通过，再手动运行
   `Deploy Production`；当前没有启用 Vercel Git 自动部署。
 - **数据刷新**：`.github/workflows/ingest.yml` 在每小时 `:17`/`:47` UTC 尝试采集；每次失败最多重试两次，不提交快照、不触发部署。
-- **数据巡检**：`.github/workflows/data-health.yml` 每天 `05:23 UTC` 检查覆盖率、新鲜度和失败运行，并对临时失败做有限重试。
+- **数据巡检**：`.github/workflows/data-health.yml` 每天 `05:23 UTC` 先检查健康；异常时立即采集补洞并复检，只有修复后仍异常才失败告警。
+- **独立兜底**：Vercel Hobby 每天 `06:11 UTC` 调用受 `CRON_SECRET` 保护的恢复入口。它只承担每日安全网，不替代 GitHub 的半小时级主采集，也不产生新的付费资源。
 - **健康口径**：K 线覆盖默认容忍最新一个闭合小时的落库延迟；报价超过两小时未更新仍会判定为 `critical` 并触发失败告警。
 
 Production：[crypto-sector-board.vercel.app](https://crypto-sector-board.vercel.app)

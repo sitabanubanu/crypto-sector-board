@@ -4,60 +4,18 @@ import {
   createDefaultCandleAdapters,
   createDefaultQuoteAdapters,
 } from "../lib/ingestion/provider-adapters";
+import { resolveMarketIngestionOptions } from "../lib/ingestion/options";
 import { runMarketIngestion } from "../lib/ingestion/service";
-
-function positiveInteger(name: string, fallback: number): number {
-  const raw = process.env[name]?.trim();
-  if (!raw) return fallback;
-  const value = Number(raw);
-  if (!Number.isInteger(value) || value < 1) {
-    throw new Error(`${name} must be a positive integer.`);
-  }
-  return value;
-}
-
-function optionalPositiveInteger(name: string): number | undefined {
-  const raw = process.env[name]?.trim();
-  if (!raw) return undefined;
-  const value = Number(raw);
-  if (!Number.isInteger(value) || value < 1) {
-    throw new Error(`${name} must be a positive integer.`);
-  }
-  return value;
-}
 
 async function main() {
   const database = getDatabase();
-  const historyBackfillHours = optionalPositiveInteger(
-    "INGEST_HISTORY_BACKFILL_HOURS",
-  );
-  const initialBackfillHours = positiveInteger(
-    "INGEST_INITIAL_BACKFILL_HOURS",
-    24,
-  );
-  const repairLookbackHours = positiveInteger(
-    "INGEST_REPAIR_LOOKBACK_HOURS",
-    24,
-  );
-  const maxBackfillHours = positiveInteger(
-    "INGEST_MAX_BACKFILL_HOURS",
-    Math.max(168, historyBackfillHours ?? 0),
-  );
-
   const results = await runMarketIngestion(
     database,
     {
       candles: createDefaultCandleAdapters(),
       quotes: createDefaultQuoteAdapters(),
     },
-    {
-      candles: {
-        historyBackfillHours,
-        initialBackfillHours,
-        repairLookbackHours,
-        maxBackfillHours,
-      },
-    },
+    resolveMarketIngestionOptions(),
   );
   const summary = {
     generatedAt: new Date().toISOString(),

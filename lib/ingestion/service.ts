@@ -50,6 +50,11 @@ export interface CandleIngestionOptions extends CommonIngestionOptions {
 
 export type QuoteIngestionOptions = CommonIngestionOptions;
 
+export interface MarketIngestionOptions {
+  candles?: CandleIngestionOptions;
+  quotes?: QuoteIngestionOptions;
+}
+
 function floorToHour(date: Date): Date {
   return new Date(Math.floor(date.getTime() / HOUR_MS) * HOUR_MS);
 }
@@ -736,10 +741,7 @@ export async function runMarketIngestion<
     candles: ProviderCandleAdapter[];
     quotes: ProviderQuoteAdapter[];
   },
-  options: {
-    candles?: CandleIngestionOptions;
-    quotes?: QuoteIngestionOptions;
-  } = {},
+  options: MarketIngestionOptions = {},
 ): Promise<IngestionRunResult[]> {
   const results: IngestionRunResult[] = [];
   for (const adapter of adapters.quotes) {
