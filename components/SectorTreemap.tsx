@@ -24,7 +24,7 @@ interface Props {
   highlightedAssetIds?: ReadonlySet<string>;
   highlightedSectorIds?: ReadonlySet<string>;
   hasSearchHighlight?: boolean;
-  onCoinClick?: (coin: CoinSnapshot, sectorName: string) => void;
+  onCoinClick?: (coin: CoinSnapshot, sector: SectorSnapshot) => void;
   onSectorClick?: (sector: SectorSnapshot) => void;
 }
 
@@ -177,6 +177,10 @@ export default function SectorTreemap({
                 role="button"
                 tabIndex={0}
                 aria-label={`${sector.name}板块详情`}
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  event.currentTarget.focus();
+                }}
                 onClick={() => onSectorClick?.(sector)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
@@ -250,6 +254,10 @@ export default function SectorTreemap({
                 role="button"
                 tabIndex={0}
                 aria-label={`${sector.name}板块详情`}
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  event.currentTarget.focus();
+                }}
                 onClick={() => onSectorClick?.(sector)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
@@ -332,11 +340,15 @@ export default function SectorTreemap({
                       })
                     }
                     onMouseLeave={() => hideHover()}
-                    onClick={() => onCoinClick?.(coin, sector.name)}
+                    onPointerDown={(event) => {
+                      event.preventDefault();
+                      event.currentTarget.focus();
+                    }}
+                    onClick={() => onCoinClick?.(coin, sector)}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" || event.key === " ") {
                         event.preventDefault();
-                        onCoinClick?.(coin, sector.name);
+                        onCoinClick?.(coin, sector);
                       }
                     }}
                     style={{ cursor: "pointer" }}

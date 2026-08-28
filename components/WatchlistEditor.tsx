@@ -7,6 +7,7 @@ import {
   createCustomSectorEditorState,
   customSectorEditorReducer,
 } from "@/lib/watchlist-editor";
+import { useDismissibleLayer } from "@/components/useDismissibleLayer";
 
 interface Props {
   open: boolean;
@@ -49,6 +50,8 @@ export default function WatchlistEditor({
     createCustomSectorEditorState,
   );
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
   const assetsById = useMemo(
     () => new Map(assets.map((asset) => [asset.assetId, asset])),
     [assets],
@@ -109,6 +112,13 @@ export default function WatchlistEditor({
     if (!open) dispatchEditor({ type: "close" });
   }, [open]);
 
+  useDismissibleLayer({
+    open,
+    layerRef: drawerRef,
+    initialFocusRef: closeRef,
+    onDismiss: onClose,
+  });
+
   if (!open) return null;
 
   // Separate built-in vs custom sector IDs
@@ -119,6 +129,7 @@ export default function WatchlistEditor({
     <>
       {/* Backdrop */}
       <div
+        aria-hidden="true"
         onClick={onClose}
         style={{
           position: "fixed",
@@ -130,6 +141,10 @@ export default function WatchlistEditor({
 
       {/* Drawer */}
       <div
+        ref={drawerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="watchlist-editor-title"
         style={{
           position: "fixed",
           top: 0,
@@ -155,11 +170,14 @@ export default function WatchlistEditor({
             alignItems: "center",
           }}
         >
-          <span style={{ fontSize: 16, fontWeight: 700, color: "#1f2328" }}>
+          <span id="watchlist-editor-title" style={{ fontSize: 16, fontWeight: 700, color: "#1f2328" }}>
             自选板块
           </span>
           <button
+            ref={closeRef}
+            type="button"
             onClick={onClose}
+            aria-label="关闭自选板块"
             style={{
               background: "none",
               border: "none",

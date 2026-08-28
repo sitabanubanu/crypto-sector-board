@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { CorrelationMatrix } from "@/lib/correlation";
+import { useDismissibleLayer } from "@/components/useDismissibleLayer";
 
 interface Props {
   matrix: CorrelationMatrix | null;
@@ -34,6 +35,16 @@ function textColorForCorr(r: number | null): string {
 
 export default function CorrelationHeatmap({ matrix, isMobile }: Props) {
   const [open, setOpen] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const closeDialog = useCallback(() => setOpen(false), []);
+
+  useDismissibleLayer({
+    open,
+    layerRef: dialogRef,
+    initialFocusRef: closeRef,
+    onDismiss: closeDialog,
+  });
 
   const n = matrix?.sectorIds.length ?? 0;
   const cellSize = isMobile ? 22 : 28;
@@ -73,7 +84,8 @@ export default function CorrelationHeatmap({ matrix, isMobile }: Props) {
       {open && (
         <>
           <div
-            onClick={() => setOpen(false)}
+            aria-hidden="true"
+            onClick={closeDialog}
             style={{
               position: "fixed",
               inset: 0,
@@ -82,6 +94,7 @@ export default function CorrelationHeatmap({ matrix, isMobile }: Props) {
             }}
           />
           <div
+            ref={dialogRef}
             id="correlation-dialog"
             role="dialog"
             aria-modal="true"
@@ -113,7 +126,9 @@ export default function CorrelationHeatmap({ matrix, isMobile }: Props) {
                 板块相关性矩阵
               </span>
               <button
-                onClick={() => setOpen(false)}
+                ref={closeRef}
+                type="button"
+                onClick={closeDialog}
                 aria-label="关闭相关性矩阵"
                 style={{
                   background: "none",

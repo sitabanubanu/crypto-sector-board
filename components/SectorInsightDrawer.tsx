@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import type { SectorSnapshot } from "@/lib/types";
 import type { SectorInsight } from "@/lib/market-insights";
 import { formatMarketCap, formatPct, getSectorReturn } from "@/lib/colors";
 import type { PeriodType } from "@/lib/types";
+import { useDismissibleLayer } from "@/components/useDismissibleLayer";
 
 interface Props {
   sector: SectorSnapshot;
@@ -21,32 +22,36 @@ export default function SectorInsightDrawer({
   isMobile,
   onClose,
 }: Props) {
+  const drawerRef = useRef<HTMLElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => {
-    closeRef.current?.focus();
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
+  useDismissibleLayer({
+    open: true,
+    layerRef: drawerRef,
+    initialFocusRef: closeRef,
+    onDismiss: onClose,
+    dismissOnPointerDownOutside: !isMobile,
+  });
 
   return (
     <>
-      <div
-        aria-hidden="true"
-        onClick={onClose}
-        style={{
-          position: "fixed",
-          inset: 0,
-          background: "rgba(15, 23, 42, 0.28)",
-          zIndex: 220,
-        }}
-      />
+      {isMobile && (
+        <div
+          aria-hidden="true"
+          data-testid="sector-insight-backdrop"
+          onClick={onClose}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15, 23, 42, 0.28)",
+            zIndex: 220,
+          }}
+        />
+      )}
       <aside
+        ref={drawerRef}
         role="dialog"
-        aria-modal="true"
+        aria-modal={isMobile ? true : undefined}
         aria-labelledby="sector-insight-title"
         style={{
           position: "fixed",

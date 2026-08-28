@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import type { CoinSnapshot, SectorSnapshot } from "@/lib/types";
 import {
   assetQualityResearchFile,
@@ -7,6 +8,7 @@ import {
   type AssetQualityResearch,
 } from "@/lib/market-insights";
 import { getCoinReturn, hasCoinReturnForPeriod, coinColorForPeriod, formatPct, formatMarketCap } from "@/lib/colors";
+import { useDismissibleLayer } from "@/components/useDismissibleLayer";
 
 interface Props {
   coin: CoinSnapshot;
@@ -41,6 +43,16 @@ function turnoverRatio(
 }
 
 export default function CoinDetailModal({ coin, sectorName, sector, insight, qualityResearch, closes, onClose }: Props) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  useDismissibleLayer({
+    open: true,
+    layerRef: dialogRef,
+    initialFocusRef: closeRef,
+    onDismiss: onClose,
+  });
+
   const turnover = turnoverRatio(coin.volume24h, coin.marketCap);
   const sectorTurnover = turnoverRatio(sector.totalVolume24h, sector.totalMarketCap);
 
@@ -62,6 +74,7 @@ export default function CoinDetailModal({ coin, sectorName, sector, insight, qua
     <>
       {/* Backdrop */}
       <div
+        aria-hidden="true"
         onClick={onClose}
         style={{
           position: "fixed",
@@ -76,6 +89,7 @@ export default function CoinDetailModal({ coin, sectorName, sector, insight, qua
 
       {/* Modal */}
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="coin-detail-title"
@@ -117,6 +131,8 @@ export default function CoinDetailModal({ coin, sectorName, sector, insight, qua
             </div>
           </div>
           <button
+            ref={closeRef}
+            type="button"
             onClick={onClose}
             aria-label="关闭币种详情"
             style={{

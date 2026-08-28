@@ -30,13 +30,17 @@ import { buildCustomSectorSnapshots } from "@/lib/market-data/custom-sectors";
 import { detectAllSignals } from "@/lib/signals";
 import { buildCorrelationMatrix } from "@/lib/correlation";
 import { buildMarketPulse, searchMarket, type MarketSearchResult } from "@/lib/market-pulse";
-import type { PeriodType, WatchlistConfig, CustomSectorConfig, CoinSnapshot } from "@/lib/types";
+import type { PeriodType, WatchlistConfig, CustomSectorConfig, SectorSnapshot } from "@/lib/types";
 import {
   getAssetInsight,
   getAssetQualityResearch,
   getSectorInsight,
 } from "@/lib/market-insights";
 import type { BoardResponse } from "@/lib/market-data/bff-contracts";
+import {
+  resolveDetailSelection,
+  type DetailSelection,
+} from "@/lib/detail-selection";
 
 interface Props {
   initialBoard: BoardResponse;
@@ -70,8 +74,7 @@ export default function HomeClient({ initialBoard }: Props) {
   // Start with the board as the primary full-height view. Users can use the
   // bottom-left toggle to switch to the board + data split (or chart-only).
   const [mainView, setMainView] = useState<"split" | "chart" | "treemap">("treemap");
-  const [selectedCoin, setSelectedCoin] = useState<{ coin: CoinSnapshot; sectorName: string } | null>(null);
-  const [selectedSector, setSelectedSector] = useState<import("@/lib/types").SectorSnapshot | null>(null);
+  const [detailSelection, setDetailSelection] = useState<DetailSelection>(null);
   const [statusBarMode, setStatusBarMode] = useState<"full" | "compact" | "hidden">("compact");
   const [watchlistOpen, setWatchlistOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -216,6 +219,11 @@ export default function HomeClient({ initialBoard }: Props) {
     };
   }, [snapshot, watchlistConfig]);
 
+  const resolvedDetail = useMemo(
+    () => resolveDetailSelection(detailSelection, activeSnapshot.sectors),
+    [activeSnapshot.sectors, detailSelection],
+  );
+
   const marketPulse = useMemo(
     () => buildMarketPulse(activeSnapshot, historyByAssetId),
     [activeSnapshot, historyByAssetId],
@@ -259,15 +267,18 @@ export default function HomeClient({ initialBoard }: Props) {
       if (result.kind === "sector") {
         const sector = activeSnapshot.sectors.find((candidate) => candidate.id === result.id);
         if (sector) {
-          setSelectedCoin(null);
-          setSelectedSector(sector);
+          setDetailSelection({ kind: "sector", sectorId: sector.id });
         }
         return;
       }
       for (const sector of activeSnapshot.sectors) {
         const coin = sector.coins.find((candidate) => candidate.id === result.id);
         if (coin) {
-          setSelectedCoin({ coin, sectorName: sector.name });
+          setDetailSelection({
+            kind: "coin",
+            sectorId: sector.id,
+            coinId: coin.id,
+          });
           return;
         }
       }
@@ -275,20 +286,22 @@ export default function HomeClient({ initialBoard }: Props) {
     [activeSnapshot.sectors],
   );
 
-  const handleSectorClick = useCallback((sector: import("@/lib/types").SectorSnapshot) => {
-    setSelectedCoin(null);
-    setSelectedSector(sector);
+  const handleSectorClick = useCallback((sector: SectorSnapshot) => {
+    setDetailSelection({ kind: "sector", sectorId: sector.id });
   }, []);
 
-  // Coin → sector lookup for detail modal
-  const coinSector = useMemo(() => {
-    for (const s of activeSnapshot.sectors) {
-      for (const c of s.coins) {
-        if (c.id === selectedCoin?.coin.id) return s;
-      }
-    }
-    return undefined;
-  }, [activeSnapshot.sectors, selectedCoin]);
+  const handleCoinClick = useCallback(
+    (coin: SectorSnapshot["coins"][number], sector: SectorSnapshot) => {
+      setDetailSelection({
+        kind: "coin",
+        sectorId: sector.id,
+        coinId: coin.id,
+      });
+    },
+    [],
+  );
+
+  const closeDetail = useCallback(() => setDetailSelection(null), []);
 
   const customSectors: CustomSectorConfig[] = watchlistConfig.customSectors ?? [];
 
@@ -377,7 +390,7 @@ export default function HomeClient({ initialBoard }: Props) {
               highlightedAssetIds={highlightedAssetIds}
               highlightedSectorIds={highlightedSectorIds}
               hasSearchHighlight={hasSearchHighlight}
-              onCoinClick={(coin, sectorName) => setSelectedCoin({ coin, sectorName })}
+              onCoinClick={handleCoinClick}
               onSectorClick={handleSectorClick}
             />
           )}
@@ -447,25 +460,25 @@ export default function HomeClient({ initialBoard }: Props) {
         onDeleteCustomSector={handleDeleteCustomSector}
       />
 
-      {selectedCoin && coinSector && (
+      {resolvedDetail?.kind === "coin" && (
         <CoinDetailModal
-          coin={selectedCoin.coin}
-          sectorName={selectedCoin.sectorName}
-          sector={coinSector}
-          insight={getAssetInsight(selectedCoin.coin.id)}
-          qualityResearch={getAssetQualityResearch(selectedCoin.coin.id)}
-          closes={closesByAssetId.get(selectedCoin.coin.id)}
-          onClose={() => setSelectedCoin(null)}
+          coin={resolvedDetail.coin}
+          sectorName={resolvedDetail.sector.name}
+          sector={resolvedDetail.sector}
+          insight={getAssetInsight(resolvedDetail.coin.id)}
+          qualityResearch={getAssetQualityResearch(resolvedDetail.coin.id)}
+          closes={closesByAssetId.get(resolvedDetail.coin.id)}
+          onClose={closeDetail}
         />
       )}
 
-      {selectedSector && (
+      {resolvedDetail?.kind === "sector" && (
         <SectorInsightDrawer
-          sector={selectedSector}
-          insight={getSectorInsight(selectedSector.id)}
+          sector={resolvedDetail.sector}
+          insight={getSectorInsight(resolvedDetail.sector.id)}
           period={period}
           isMobile={isMobile}
-          onClose={() => setSelectedSector(null)}
+          onClose={closeDetail}
         />
       )}
     </div>
