@@ -28,6 +28,22 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Apply database migrations
-        run: npm run db:migrate
+        shell: bash
+        run: |
+          set +e
+          final_status=1
+          for attempt in 1 2 3; do
+            npm run db:migrate
+            final_status=$?
+            if [ "$final_status" -eq 0 ]; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              delay=$((attempt * 15))
+              echo "Database migration attempt $attempt failed; retrying in ${delay}s."
+              sleep "$delay"
+            fi
+          done
+          exit "$final_status"
       - name: Check data health and repair stale data
         run: npm run data:repair
