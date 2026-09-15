@@ -176,6 +176,22 @@ describe("market pulse", () => {
     expect(signal?.reason).toContain("从 #4 变为 #1");
   });
 
+  test("uses the selected period for pulse values and coverage", () => {
+    const target = {
+      ...sector("a-sector", "A 板块", [coin("a1", "A1", 0.01)], 0.01),
+      weightedReturnPct3d: 0.2,
+      coverageByPeriod: { "24h": 1, "3d": 1 },
+      coins: [{ ...coin("a1", "A1", 0.01), returnPct3d: 0.3 }],
+    };
+    const result = buildMarketPulse(snapshot([target]), new Map(), "3d");
+    const pulse = result.sectors[0];
+
+    expect(pulse.currentReturn).toBe(0.2);
+    expect(pulse.breadthRatio).toBe(1);
+    expect(pulse.medianReturn).toBe(0.3);
+    expect(pulse.currentCoverageRatio).toBe(1);
+  });
+
   test("does not emit a signal for insufficient data", () => {
     const pulse: SectorPulse = {
       sectorId: "defi",

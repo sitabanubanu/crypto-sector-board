@@ -4,7 +4,12 @@ import {
   type AssetHistoryMap,
   type SectorReturnPoint,
 } from "./sector-history";
-import type { CoinSnapshot, DailySnapshot, SectorSnapshot } from "./types";
+import type {
+  CoinSnapshot,
+  DailySnapshot,
+  PeriodType,
+  SectorSnapshot,
+} from "./types";
 
 export const MIN_ANOMALY_SAMPLE_SIZE = 20;
 const DAY_MS = 24 * 60 * 60 * 1_000;
@@ -91,8 +96,25 @@ function zScore(
   return Number.isFinite(score) ? score : null;
 }
 
-function currentCoverage(sector: SectorSnapshot): number {
-  return sector.coverageByPeriod?.["24h"] ?? sector.coverageRatio ?? 0;
+function periodReturn(coin: CoinSnapshot, period: PeriodType): number | null {
+  if (period === "3d") return coin.returnPct3d ?? null;
+  if (period === "7d") return coin.returnPct7d ?? null;
+  if (period === "30d") return coin.returnPct30d ?? null;
+  return coin.returnPct;
+}
+
+function periodSectorReturn(
+  sector: SectorSnapshot,
+  period: PeriodType,
+): number | null {
+  if (period === "3d") return sector.weightedReturnPct3d ?? null;
+  if (period === "7d") return sector.weightedReturnPct7d ?? null;
+  if (period === "30d") return sector.weightedReturnPct30d ?? null;
+  return sector.weightedReturnPct;
+}
+
+function currentCoverage(sector: SectorSnapshot, period: PeriodType): number {
+  return sector.coverageByPeriod?.[period] ?? sector.coverageRatio ?? 0;
 }
 
 function previousCompleteUtcDay(value: string): string | null {
@@ -117,7 +139,7 @@ function rankSectors(
   );
 }
 
-function contributions(sector: SectorSnapshot): {
+function contributions(sector: SectorSnapshot, period: PeriodType): {
   topContributors: SectorContribution[];
   top3ConcentrationRatio: number | null;
 } {
@@ -126,7 +148,7 @@ function contributions(sector: SectorSnapshot): {
       coin.isMainstream &&
       finite(coin.marketCap) &&
       coin.marketCap > 0 &&
-      finite(coin.returnPct),
+      finite(periodReturn(coin, period)),
   );
   const coveredMarketCap = eligible.reduce(
     (sum, coin) => sum + coin.marketCap!,
@@ -140,7 +162,8 @@ function contributions(sector: SectorSnapshot): {
     assetId: coin.id,
     symbol: coin.symbol,
     name: coin.name,
-    contribution: (coin.returnPct! * coin.marketCap!) / coveredMarketCap,
+    contribution:
+      (periodReturn(coin, period)! * coin.marketCap!) / coveredMarketCap,
   }));
   const totalAbsoluteContribution = raw.reduce(
     (sum, item) => sum + Math.abs(item.contribution),
@@ -203,6 +226,7 @@ function uniqueCoins(sectors: SectorSnapshot[]): CoinSnapshot[] {
 export function buildMarketPulse(
   snapshot: DailySnapshot,
   historyByAssetId: AssetHistoryMap,
+  period: PeriodType = "24h",
 ): MarketPulse {
   const asOf = snapshot.dataQuality?.asOf ?? snapshot.generatedAt;
   const expectedHistoryDate = previousCompleteUtcDay(asOf);
@@ -217,10 +241,11 @@ export function buildMarketPulse(
   );
   const currentRank = rankSectors(
     snapshot.sectors.flatMap((sector) => {
-      const coverage = currentCoverage(sector);
-      return finite(sector.weightedReturnPct) &&
+      const coverage = currentCoverage(sector, period);
+      const value = periodSectorReturn(sector, period);
+      return finite(value) &&
         coverage >= MIN_SECTOR_COVERAGE_RATIO
-        ? [{ sectorId: sector.id, value: sector.weightedReturnPct }]
+        ? [{ sectorId: sector.id, value }]
         : [];
     }),
   );
@@ -243,7 +268,7 @@ export function buildMarketPulse(
 
   const pulses = snapshot.sectors.map((sector) => {
     const validReturns = sector.coins.flatMap((coin) =>
-      finite(coin.returnPct) ? [coin.returnPct] : [],
+      finite(periodReturn(coin, period)) ? [periodReturn(coin, period)!] : [],
     );
     const breadthSampleSize = validReturns.length;
     const coinCoverageRatio =
@@ -251,12 +276,13 @@ export function buildMarketPulse(
         ? breadthSampleSize / sector.coins.length
         : 0;
     const series = seriesBySector.get(sector.id) ?? [];
-    const currentReturn = finite(sector.weightedReturnPct)
-      ? sector.weightedReturnPct
+    const sectorReturn = periodSectorReturn(sector, period);
+    const currentReturn = finite(sectorReturn)
+      ? sectorReturn
       : null;
     const rankedNow = currentRank.get(sector.id) ?? null;
     const rankedBefore = previousRank.get(sector.id) ?? null;
-    const coverage = currentCoverage(sector);
+    const coverage = currentCoverage(sector, period);
     const historyIsCurrent =
       expectedHistoryDate != null &&
       series.at(-1)?.date === expectedHistoryDate;
@@ -268,7 +294,7 @@ export function buildMarketPulse(
       historyIsCurrent
         ? "ok"
         : "insufficient_data";
-    const contributionSummary = contributions(sector);
+    const contributionSummary = contributions(sector, period);
 
     return {
       sectorId: sector.id,
@@ -303,7 +329,7 @@ export function buildMarketPulse(
 
   const marketCoins = uniqueCoins(snapshot.sectors);
   const validMarketReturns = marketCoins.flatMap((coin) =>
-    finite(coin.returnPct) ? [coin.returnPct] : [],
+    finite(periodReturn(coin, period)) ? [periodReturn(coin, period)!] : [],
   );
 
   return {

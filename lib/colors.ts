@@ -21,7 +21,8 @@ export function hasSectorReturnForPeriod(sector: SectorSnapshot, period: PeriodT
 
 export function returnPctToColor(pct: number): string {
   if (pct >= 0.08) return "#c81e1e";
-  if (pct >= 0.04) return "#e53e3e";
+  // Keep the middle red dark enough for white labels to remain readable.
+  if (pct >= 0.04) return "#c53030";
   if (pct >= 0.01) return "#fc8181";
   if (pct >= 0) return "#fed7d7";
   if (pct >= -0.01) return "#c6f6d5";
@@ -31,7 +32,9 @@ export function returnPctToColor(pct: number): string {
 }
 
 export function textColorOnBlock(pct: number): string {
-  return Math.abs(pct) >= 0.01 ? "#ffffff" : "#1f2328";
+  // Mid-range red/green blocks are intentionally paired with dark text;
+  // their lighter fills do not provide 4.5:1 contrast with white.
+  return Math.abs(pct) >= 0.08 ? "#ffffff" : "#1f2328";
 }
 
 export function formatPct(pct: number | null | undefined): string {
