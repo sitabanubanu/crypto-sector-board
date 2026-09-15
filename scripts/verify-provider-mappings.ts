@@ -1,4 +1,6 @@
+import "../envConfig";
 import { z } from "zod";
+import { closeDatabase, getDatabase } from "../lib/db/connection";
 import {
   auditProviderMappings,
   type ProviderInventoryItem,
@@ -8,6 +10,7 @@ import {
   RegistryProviderSchema,
   type RegistryProvider,
 } from "../lib/market-data/registry";
+import { persistProviderMappingChecks } from "../lib/market-data/mapping-audit-store";
 
 const GateInventorySchema = z.array(
   z
@@ -25,10 +28,13 @@ const OkxInventorySchema = z
     code: z.literal("0"),
     data: z.array(
       z
-        .object({
-          instId: z.string().min(1),
-          baseCcy: z.string().min(1),
-          quoteCcy: z.string().min(1),
+      .object({
+        instId: z.string().min(1),
+        // OKX occasionally includes non-trading metadata rows with empty
+        // currency fields. They are ignored below after the envelope is
+        // validated instead of making the whole provider audit fail.
+        baseCcy: z.string(),
+        quoteCcy: z.string(),
           state: z.string().min(1),
         })
         .passthrough(),
@@ -102,13 +108,20 @@ async function fetchOkxInventory(): Promise<ProviderInventoryItem[]> {
       "https://www.okx.com/api/v5/public/instruments?instType=SPOT",
     ),
   );
-  return payload.data.map((item) => ({
-    provider: "okx",
-    instrumentId: item.instId,
-    baseSymbol: item.baseCcy,
-    quoteSymbol: item.quoteCcy,
-    status: item.state === "live" ? "active" : "inactive",
-  }));
+  return payload.data.flatMap((item) => {
+    const baseSymbol = item.baseCcy.trim().toUpperCase();
+    const quoteSymbol = item.quoteCcy.trim().toUpperCase();
+    if (!baseSymbol || !quoteSymbol) return [];
+    return [
+      {
+        provider: "okx" as const,
+        instrumentId: item.instId,
+        baseSymbol,
+        quoteSymbol,
+        status: item.state === "live" ? ("active" as const) : ("inactive" as const),
+      },
+    ];
+  });
 }
 
 async function fetchCoinGeckoInventory(): Promise<ProviderInventoryItem[]> {
@@ -135,6 +148,7 @@ async function fetchCoinGeckoInventory(): Promise<ProviderInventoryItem[]> {
 
 async function main() {
   const providers = parseProviders();
+  const persist = process.argv.includes("--persist");
   const loaders: Record<
     RegistryProvider,
     () => Promise<ProviderInventoryItem[]>
@@ -143,18 +157,67 @@ async function main() {
     okx: fetchOkxInventory,
     coingecko: fetchCoinGeckoInventory,
   };
-  const inventory = (
-    await Promise.all(providers.map((provider) => loaders[provider]()))
-  ).flat();
+  const providerResults = await Promise.all(
+    providers.map(async (provider) => {
+      try {
+        return { provider, inventory: await loaders[provider](), error: null };
+      } catch (error) {
+        return {
+          provider,
+          inventory: [],
+          error: error instanceof Error ? error.message : "unknown error",
+        };
+      }
+    }),
+  );
+  const inventory = providerResults.flatMap((result) => result.inventory);
   const report = auditProviderMappings(inventory, providers);
+  report.errors.push(
+    ...providerResults.flatMap((result) =>
+      result.error
+        ? [
+            {
+              severity: "error" as const,
+              code: "INVENTORY_FETCH_FAILED" as const,
+              provider: result.provider,
+              message: `Provider inventory fetch failed: ${result.error}`,
+            },
+          ]
+        : [],
+    ),
+  );
+  const checkedAt = new Date();
 
-  console.log(JSON.stringify(report, null, 2));
+  if (persist) {
+    await persistProviderMappingChecks(getDatabase(), {
+      checkedAt,
+      providers,
+      inventory,
+      report,
+    });
+  }
+
+  console.log(
+    JSON.stringify(
+      {
+        ...report,
+        persisted: persist,
+        checkedAt: persist ? checkedAt.toISOString() : undefined,
+      },
+      null,
+      2,
+    ),
+  );
   if (report.errors.length > 0) {
     process.exitCode = 1;
   }
 }
 
-main().catch((error) => {
-  console.error("Provider mapping verification failed:", error);
-  process.exitCode = 1;
-});
+main()
+  .catch((error) => {
+    console.error("Provider mapping verification failed:", error);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    await closeDatabase();
+  });

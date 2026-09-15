@@ -61,9 +61,18 @@ export default function CoinDetailModal({ coin, sectorName, sector, insight, qua
   for (const p of PERIODS) {
     const cr = getCoinReturn(coin, p.key);
     const sr = getSectorAvgReturn(sector, p.key);
-    if (cr != null && sr != null && sr !== 0) {
-      if (cr > sr) evaluations.push(`${p.key}跑赢板块`);
-      else evaluations.push(`${p.key}落后板块`);
+    if (cr != null && sr != null) {
+      const tolerance = Math.max(
+        0.0001,
+        Math.max(Math.abs(cr), Math.abs(sr)) * 0.001,
+      );
+      if (Math.abs(cr - sr) <= tolerance) {
+        evaluations.push(`${p.key}与板块持平`);
+      } else if (cr > sr) {
+        evaluations.push(`${p.key}跑赢板块`);
+      } else {
+        evaluations.push(`${p.key}落后板块`);
+      }
     }
   }
   const evalText = evaluations.length > 0

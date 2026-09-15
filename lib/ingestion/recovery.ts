@@ -26,12 +26,12 @@ export async function runMarketDataRecovery(
   dependencies: MarketDataRecoveryDependencies,
 ): Promise<MarketDataRecoveryResult> {
   const healthBefore = await dependencies.checkHealth();
-  if (healthBefore.status === "healthy") {
+  if (healthBefore.status === "healthy" || healthBefore.blockingIssues.length === 0) {
     return {
       action: "none",
       healthBefore,
       healthAfter: healthBefore,
-      healthy: true,
+      healthy: healthBefore.status === "healthy",
       runs: [],
     };
   }
@@ -43,7 +43,9 @@ export async function runMarketDataRecovery(
     healthBefore,
     healthAfter,
     healthy:
-      healthAfter.status === "healthy" && !hasFailedRun(runs),
+      healthAfter.status === "healthy" &&
+      healthAfter.blockingIssues.length === 0 &&
+      !hasFailedRun(runs),
     runs,
   };
 }

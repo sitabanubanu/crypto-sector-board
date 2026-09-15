@@ -1,0 +1,46 @@
+name: Provider Mapping Audit
+
+on:
+  schedule:
+    # Keep registry verification separate from hourly market ingestion and
+    # away from the busiest top-of-hour scheduling window.
+    - cron: "7 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: provider-mapping-audit
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: ${{ secrets.INGEST_DATABASE_URL }}
+      COINGECKO_API_KEY: ${{ secrets.COINGECKO_API_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - name: Apply database migrations
+        run: npm run db:migrate
+      - name: Verify and persist provider mappings
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run registry:verify -- --persist | tee provider-mapping-audit.json
+      - name: Upload mapping audit evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: provider-mapping-audit-${{ github.run_id }}
+          path: provider-mapping-audit.json
+          if-no-files-found: ignore

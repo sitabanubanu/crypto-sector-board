@@ -31,6 +31,8 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+      - run: npm run registry:check
+      - run: npm run db:check
       - run: npm test
       - run: npm run audit:prod
       - run: npm run audit:all-policy

@@ -46,6 +46,11 @@ export const ingestionStatusEnum = pgEnum("ingestion_status", [
   "skipped_duplicate",
 ]);
 
+export const mappingCheckStatusEnum = pgEnum("mapping_check_status", [
+  "success",
+  "failed",
+]);
+
 export const assets = pgTable(
   "assets",
   {
@@ -197,6 +202,44 @@ export const providerInstruments = pgTable(
     check(
       "provider_instruments_delisted_timestamp",
       sql`${table.status} <> 'delisted' or ${table.delistedAt} is not null`,
+    ),
+  ],
+);
+
+/**
+ * The latest live inventory audit for each provider. This is deliberately
+ * separate from provider_instruments.last_verified_at: the registry timestamp
+ * describes when static project-owned metadata was reviewed, while this table
+ * records evidence obtained from a provider inventory endpoint.
+ */
+export const providerMappingChecks = pgTable(
+  "provider_mapping_checks",
+  {
+    provider: providerEnum("provider").primaryKey(),
+    checkedAt: timestamp("checked_at", {
+      withTimezone: true,
+      mode: "date",
+    }).notNull(),
+    status: mappingCheckStatusEnum("status").notNull(),
+    inventoryHash: text("inventory_hash").notNull(),
+    checkedMappings: integer("checked_mappings").notNull().default(0),
+    inventoryItems: integer("inventory_items").notNull().default(0),
+    errorCount: integer("error_count").notNull().default(0),
+    warningCount: integer("warning_count").notNull().default(0),
+    errors: jsonb("errors")
+      .$type<Array<Record<string, unknown>>>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    warnings: jsonb("warnings")
+      .$type<Array<Record<string, unknown>>>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+  },
+  (table) => [
+    check("provider_mapping_checks_hash_nonempty", sql`${table.inventoryHash} <> ''`),
+    check(
+      "provider_mapping_checks_counts_nonnegative",
+      sql`${table.checkedMappings} >= 0 and ${table.inventoryItems} >= 0 and ${table.errorCount} >= 0 and ${table.warningCount} >= 0`,
     ),
   ],
 );
@@ -527,6 +570,10 @@ export type NewAssetRow = typeof assets.$inferInsert;
 export type ProviderInstrumentRow = typeof providerInstruments.$inferSelect;
 export type NewProviderInstrumentRow =
   typeof providerInstruments.$inferInsert;
+export type ProviderMappingCheckRow =
+  typeof providerMappingChecks.$inferSelect;
+export type NewProviderMappingCheckRow =
+  typeof providerMappingChecks.$inferInsert;
 export type MarketCandleRow = typeof marketCandles.$inferSelect;
 export type NewMarketCandleRow = typeof marketCandles.$inferInsert;
 export type MarketCapRow = typeof marketCaps.$inferSelect;
