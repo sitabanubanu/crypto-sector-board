@@ -61,6 +61,9 @@ export function createMarketDataCronHandler(
           action: result.action,
           statusBefore: result.healthBefore.status,
           statusAfter: result.healthAfter.status,
+          blockingIssues: result.healthAfter.blockingIssues,
+          reasonCodes: result.healthAfter.reasonCodes,
+          mapping: result.healthAfter.mapping,
           generatedAt: result.healthAfter.generatedAt,
           health: {
             latestCandleAt: result.healthAfter.latestCandleAt,

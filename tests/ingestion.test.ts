@@ -591,6 +591,9 @@ describe.sequential("P3 ingestion service", () => {
           healthNow,
         );
         expect(report.status).toBe("healthy");
+        expect(report.mapping.status).toBe("missing");
+        expect(report.reasonCodes).toContain("MAPPING_CHECK_MISSING");
+        expect(report.blockingIssues).not.toContain("MAPPING_CHECK_MISSING");
         expect(report.candleCoverage.last24h.coverageRatio).toBe(1);
         expect(report.staleAssets).toEqual([]);
         expect(report.coverageAsOf).toBe("2026-07-31T03:00:00.000Z");

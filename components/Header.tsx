@@ -143,10 +143,8 @@ export default function Header({
 
   const cycleStatusBarMode = () => {
     const next = statusBarMode === "full"
-      ? "compact"
-      : statusBarMode === "compact"
-        ? "hidden"
-        : "full";
+      ? "hidden"
+      : "full";
     onStatusBarModeChange(next);
   };
 
@@ -166,7 +164,7 @@ export default function Header({
       >
         <button
           type="button"
-          onClick={() => onStatusBarModeChange("compact")}
+          onClick={() => onStatusBarModeChange("full")}
           title="显示状态栏"
           style={{ border: "none", background: "#f1f5f9", color: "#475569", borderRadius: 7, padding: "5px 9px", cursor: "pointer", fontSize: 11, fontWeight: 600 }}
         >
@@ -214,7 +212,7 @@ export default function Header({
           >
             加密板块强弱看板
           </div>
-          {!isMobile && statusBarMode === "full" && (
+          {statusBarMode === "full" && (
             <div style={{ fontSize: 12, color: "#6b7280", marginTop: 3 }}>
               数据日期 {date}（24h 滚动）· 共 {totalSectors} 板块 / {totalCoins} 币种 · {formatGeneratedAt(generatedAt)}
               <span style={{ color: freshnessColor, fontWeight: 600, marginLeft: 8 }}>
@@ -275,7 +273,13 @@ export default function Header({
           <button
             type="button"
             onClick={cycleStatusBarMode}
-            title={statusBarMode === "full" ? "压缩状态栏" : "隐藏状态栏"}
+            title={
+              statusBarMode === "full"
+                ? "隐藏状态栏"
+                : statusBarMode === "compact"
+                  ? "展开完整状态"
+                  : "显示完整状态"
+            }
             style={{
               background: "#f5f6f8",
               border: "none",
@@ -287,7 +291,11 @@ export default function Header({
               color: "#6b7280",
             }}
           >
-            {statusBarMode === "full" ? "压缩" : "隐藏"}
+            {statusBarMode === "full"
+              ? "隐藏"
+              : statusBarMode === "compact"
+                ? "展开"
+                : "显示"}
           </button>
           {!isMobile && statusBarMode === "full" && (
             <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, color: "#6b7280" }}>
@@ -368,7 +376,9 @@ function ToggleButton({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
+      aria-pressed={active}
       style={{
         padding: compact ? "5px 10px" : "6px 14px",
         fontSize: compact ? 12 : 13,

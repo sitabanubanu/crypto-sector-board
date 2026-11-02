@@ -6,10 +6,12 @@ import type {
   SectorPulse,
 } from "@/lib/market-pulse";
 import type { SectorSignal } from "@/lib/signals";
+import type { PeriodType } from "@/lib/types";
 import { formatPct } from "@/lib/colors";
 
 interface Props {
   pulse: MarketPulse;
+  period: PeriodType;
   signals: ReadonlyMap<string, SectorSignal>;
   query: string;
   searchResults: MarketSearchResult[];
@@ -46,6 +48,7 @@ function exactOrFirstResult(
 
 export default function MarketPulseBar({
   pulse,
+  period,
   signals,
   query,
   searchResults,
@@ -94,7 +97,7 @@ export default function MarketPulseBar({
         }}
       >
         <div style={{ fontSize: 11, fontWeight: 700, color: "#1f2328" }}>
-          市场脉搏
+          市场脉搏（{period}）
         </div>
         <div style={{ marginTop: 4, fontSize: 12, fontWeight: 700, color: "#334155" }}>
           广度 {formatRatio(pulse.marketBreadthRatio)}

@@ -14,6 +14,7 @@ import {
   ingestionRuns,
   marketCandles,
   marketQuotesLatest,
+  providerMappingChecks,
   providerInstruments,
 } from "@/lib/db/schema";
 import * as schema from "@/lib/db/schema";
@@ -40,6 +41,22 @@ const CANDLE_COVERAGE_GRACE_MS = HOUR_MS;
 export interface DataHealthReport {
   generatedAt: string;
   status: "healthy" | "degraded" | "critical";
+  /** Operational market-data status. Mapping maintenance is reported separately. */
+  blockingIssues: string[];
+  reasonCodes: string[];
+  mapping: {
+    status: "fresh" | "overdue" | "missing" | "failed";
+    staleBefore: string;
+    providers: Array<{
+      provider: IngestionProvider;
+      checkedAt: string | null;
+      status: "success" | "failed" | "missing";
+      checkedMappings: number;
+      inventoryItems: number;
+      errorCount: number;
+      warningCount: number;
+    }>;
+  };
   coverageAsOf: string;
   latestCandleAt: string | null;
   candleLagHours: number | null;
@@ -169,7 +186,14 @@ export async function getDataHealthReport<
   );
   const stuckRunBefore = new Date(now.getTime() - STUCK_RUN_MS);
 
-  const [mappings, candleRows, quoteRows, runs, stuckRunRows] =
+  const [
+    mappings,
+    candleRows,
+    quoteRows,
+    runs,
+    stuckRunRows,
+    mappingChecks,
+  ] =
     await Promise.all([
     database
       .select({
@@ -234,7 +258,23 @@ export async function getDataHealthReport<
       )
       .orderBy(ingestionRuns.startedAt)
       .limit(100),
+    database
+      .select({
+        provider: providerMappingChecks.provider,
+        checkedAt: providerMappingChecks.checkedAt,
+        status: providerMappingChecks.status,
+        checkedMappings: providerMappingChecks.checkedMappings,
+        inventoryItems: providerMappingChecks.inventoryItems,
+        errorCount: providerMappingChecks.errorCount,
+        warningCount: providerMappingChecks.warningCount,
+      })
+      .from(providerMappingChecks)
+      .where(inArray(providerMappingChecks.provider, LIVE_PROVIDERS)),
   ]);
+
+  const mappingCheckByProvider = new Map(
+    mappingChecks.map((check) => [check.provider, check]),
+  );
 
   const candleMappings = mappings.filter(
     (mapping) =>
@@ -414,11 +454,14 @@ export async function getDataHealthReport<
       candleMappings: activeMappings.filter(
         (mapping) => mapping.supportsCandles,
       ).length,
-      staleMappings: activeMappings.filter(
-        (mapping) =>
-          (!mapping.lastVerifiedAt ||
-            mapping.lastVerifiedAt < mappingStaleBefore),
-      ).length,
+      staleMappings:
+        (() => {
+          const check = mappingCheckByProvider.get(provider);
+          return check?.status === "success" &&
+            check.checkedAt >= mappingStaleBefore
+            ? 0
+            : activeMappings.length;
+        })(),
       lastRunAt: iso(lastRun?.startedAt),
       lastRunStatus: lastRun?.status ?? null,
       lastSuccessAt: iso(lastSuccessAt),
@@ -443,9 +486,6 @@ export async function getDataHealthReport<
   const hasStaleProvider = providerReports.some(
     (provider) => provider.successStale,
   );
-  const hasStaleMapping = providerReports.some(
-    (provider) => provider.staleMappings > 0,
-  );
   const hasStuckRun = stuckRunRows.length > 0;
   const fallbackQuoteCount = relevantQuoteRows.filter(
     (quote) => quote.fallbackUsed,
@@ -458,15 +498,77 @@ export async function getDataHealthReport<
           fallbackQuoteCount > 0 ||
           hasUnresolvedFailure ||
           hasStaleProvider ||
-          hasStaleMapping ||
           hasStuckRun ||
           staleAssets.length > 0
         ? "degraded"
         : "healthy";
 
+  const mappingProviderReports = LIVE_PROVIDERS.map((provider) => {
+    const check = mappingCheckByProvider.get(provider);
+    const status: "success" | "failed" | "missing" =
+      check?.status ?? "missing";
+    return {
+      provider,
+      checkedAt: iso(check?.checkedAt),
+      status,
+      checkedMappings: check?.checkedMappings ?? 0,
+      inventoryItems: check?.inventoryItems ?? 0,
+      errorCount: check?.errorCount ?? 0,
+      warningCount: check?.warningCount ?? 0,
+    };
+  });
+  const hasMappingFailure = mappingProviderReports.some(
+    (provider) => provider.status === "failed",
+  );
+  const hasMissingMappingCheck = mappingProviderReports.some(
+    (provider) => provider.status === "missing",
+  );
+  const hasOverdueMappingCheck = mappingProviderReports.some(
+    (provider) =>
+      provider.status === "success" &&
+      (!provider.checkedAt ||
+        new Date(provider.checkedAt) < mappingStaleBefore),
+  );
+  const mappingStatus = hasMappingFailure
+    ? "failed"
+    : hasMissingMappingCheck
+      ? "missing"
+      : hasOverdueMappingCheck
+        ? "overdue"
+        : "fresh";
+
+  const reasonCodes = [
+    ...(last24h.coverageRatio < 0.5 ? ["CANDLE_COVERAGE_CRITICAL"] : []),
+    ...(last24h.coverageRatio >= 0.5 && last24h.coverageRatio < 0.95
+      ? ["CANDLE_COVERAGE"]
+      : []),
+    ...(quoteFreshnessRatio < 0.5 ? ["QUOTE_FRESHNESS_CRITICAL"] : []),
+    ...(quoteFreshnessRatio >= 0.5 && quoteFreshnessRatio < 0.95
+      ? ["QUOTE_STALE"]
+      : []),
+    ...(fallbackQuoteCount > 0 ? ["QUOTE_FALLBACK"] : []),
+    ...(hasUnresolvedFailure ? ["PROVIDER_RUN_FAILED"] : []),
+    ...(hasStaleProvider ? ["PROVIDER_SUCCESS_STALE"] : []),
+    ...(hasStuckRun ? ["STUCK_RUN"] : []),
+    ...(staleAssets.length > 0 ? ["CANDLE_GAP"] : []),
+    ...(hasMappingFailure ? ["MAPPING_CHECK_FAILED"] : []),
+    ...(hasMissingMappingCheck ? ["MAPPING_CHECK_MISSING"] : []),
+    ...(hasOverdueMappingCheck ? ["MAPPING_CHECK_OVERDUE"] : []),
+  ];
+  const blockingIssues = reasonCodes.filter(
+    (code) => !code.startsWith("MAPPING_CHECK_"),
+  );
+
   return {
     generatedAt: now.toISOString(),
     status,
+    blockingIssues,
+    reasonCodes,
+    mapping: {
+      status: mappingStatus,
+      staleBefore: mappingStaleBefore.toISOString(),
+      providers: mappingProviderReports,
+    },
     coverageAsOf: candleHourEnd.toISOString(),
     latestCandleAt: iso(latestCandleDate),
     candleLagHours:

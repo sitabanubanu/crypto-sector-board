@@ -11,6 +11,13 @@ function healthReport(
   return {
     generatedAt: "2026-08-28T06:11:00.000Z",
     status,
+    blockingIssues: status === "healthy" ? [] : ["CANDLE_GAP"],
+    reasonCodes: status === "healthy" ? [] : ["CANDLE_GAP"],
+    mapping: {
+      status: "fresh",
+      staleBefore: "2026-07-29T06:11:00.000Z",
+      providers: [],
+    },
     coverageAsOf: "2026-08-28T05:00:00.000Z",
     latestCandleAt: "2026-08-28T04:00:00.000Z",
     candleLagHours: 1,
@@ -105,6 +112,26 @@ describe("market data recovery", () => {
     });
 
     expect(result).toMatchObject({ action: "none", healthy: true });
+    expect(ingest).not.toHaveBeenCalled();
+  });
+
+  test("does not ingest when only mapping maintenance is overdue", async () => {
+    const ingest = vi.fn(async () => [ingestionRun()]);
+    const report = healthReport("healthy");
+    report.mapping.status = "overdue";
+    report.reasonCodes = ["MAPPING_CHECK_OVERDUE"];
+    report.blockingIssues = [];
+
+    const result = await runMarketDataRecovery({
+      checkHealth: async () => report,
+      ingest,
+    });
+
+    expect(result).toMatchObject({
+      action: "none",
+      healthy: true,
+      healthBefore: { mapping: { status: "overdue" } },
+    });
     expect(ingest).not.toHaveBeenCalled();
   });
 

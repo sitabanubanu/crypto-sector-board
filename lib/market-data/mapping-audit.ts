@@ -16,6 +16,7 @@ export interface MappingAuditIssue {
   severity: "error" | "warning";
   code:
     | "DUPLICATE_INVENTORY_ID"
+    | "INVENTORY_FETCH_FAILED"
     | "ACTIVE_INSTRUMENT_MISSING"
     | "ACTIVE_INSTRUMENT_INACTIVE"
     | "BASE_SYMBOL_CHANGED"

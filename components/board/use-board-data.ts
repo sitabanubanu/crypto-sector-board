@@ -16,6 +16,12 @@ export type BoardRefreshStatus =
   | "stale"
   | "error";
 
+export type HistoryRequestStatus =
+  | "unavailable"
+  | "loading"
+  | "ready"
+  | "error";
+
 async function requestJson(url: string): Promise<unknown> {
   const response = await fetch(url, {
     credentials: "same-origin",
@@ -91,6 +97,15 @@ export function useBoardData(initialBoard: BoardResponse) {
     return result;
   }, [historyRequest.data]);
 
+  const historyStatus: HistoryRequestStatus =
+    historyUrl == null
+      ? "unavailable"
+      : historyRequest.error
+        ? "error"
+        : historyRequest.isValidating
+          ? "loading"
+          : "ready";
+
   let status: BoardRefreshStatus = "ready";
   if (boardRequest.error) status = "error";
   else if (board.meta.isStale) status = "stale";
@@ -101,6 +116,14 @@ export function useBoardData(initialBoard: BoardResponse) {
     closesByAssetId,
     historyByAssetId,
     historyQuality: historyRequest.data?.meta,
+    historyStatus,
+    historyError:
+      historyRequest.error instanceof Error
+        ? historyRequest.error.message
+        : null,
+    retryHistory: () => {
+      void historyRequest.mutate();
+    },
     status,
   };
 }

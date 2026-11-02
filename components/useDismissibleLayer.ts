@@ -44,9 +44,38 @@ export function useDismissibleLayer({
     });
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || event.isComposing) return;
+      if (event.isComposing) return;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onDismissRef.current();
+        return;
+      }
+      if (event.key !== "Tab") return;
+
+      const layer = layerRef.current;
+      if (!layer) return;
+      const focusable = Array.from(
+        layer.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((element) => {
+        const style = window.getComputedStyle(element);
+        return style.display !== "none" && style.visibility !== "hidden";
+      });
+      if (focusable.length === 0) return;
+
+      const currentIndex = focusable.indexOf(
+        document.activeElement as HTMLElement,
+      );
+      const leavingBefore = event.shiftKey && currentIndex <= 0;
+      const leavingAfter = !event.shiftKey && currentIndex === focusable.length - 1;
+      const outsideLayer = !layer.contains(document.activeElement);
+      if (!leavingBefore && !leavingAfter && !outsideLayer) return;
+
       event.preventDefault();
-      onDismissRef.current();
+      (event.shiftKey ? focusable[focusable.length - 1] : focusable[0]).focus({
+        preventScroll: true,
+      });
     };
 
     const handlePointerDown = (event: PointerEvent) => {

@@ -62,6 +62,9 @@ export default function HomeClient({ initialBoard }: Props) {
     board,
     closesByAssetId,
     historyByAssetId,
+    historyStatus,
+    historyError,
+    retryHistory,
     status: boardStatus,
   } = useBoardData(initialBoard);
   const snapshot = board.data.snapshot;
@@ -76,6 +79,7 @@ export default function HomeClient({ initialBoard }: Props) {
   const [mainView, setMainView] = useState<"split" | "chart" | "treemap">("treemap");
   const [detailSelection, setDetailSelection] = useState<DetailSelection>(null);
   const [statusBarMode, setStatusBarMode] = useState<"full" | "compact" | "hidden">("compact");
+  const [statusBarLoaded, setStatusBarLoaded] = useState(false);
   const [watchlistOpen, setWatchlistOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   useEffect(() => {
@@ -87,17 +91,20 @@ export default function HomeClient({ initialBoard }: Props) {
         }
       } catch {
         // Keep the compact in-memory default when storage is unavailable.
+      } finally {
+        setStatusBarLoaded(true);
       }
     }, 0);
     return () => window.clearTimeout(timer);
   }, []);
   useEffect(() => {
+    if (!statusBarLoaded) return;
     try {
       localStorage.setItem("crypto-sector-board:status-bar-mode", statusBarMode);
     } catch {
       // Storage is optional; the current state remains authoritative.
     }
-  }, [statusBarMode]);
+  }, [statusBarLoaded, statusBarMode]);
   const builtInSectorIdsKey = snapshot.sectors
     .map((sector) => sector.id)
     .join(",");
@@ -225,8 +232,8 @@ export default function HomeClient({ initialBoard }: Props) {
   );
 
   const marketPulse = useMemo(
-    () => buildMarketPulse(activeSnapshot, historyByAssetId),
-    [activeSnapshot, historyByAssetId],
+    () => buildMarketPulse(activeSnapshot, historyByAssetId, period),
+    [activeSnapshot, historyByAssetId, period],
   );
 
   // Versioned, explainable signals derived from rank changes and anomalies.
@@ -360,6 +367,7 @@ export default function HomeClient({ initialBoard }: Props) {
       {statusBarMode !== "hidden" && (
         <MarketPulseBar
           pulse={marketPulse}
+          period={period}
           signals={signals}
           query={searchQuery}
           searchResults={searchResults}
@@ -367,6 +375,39 @@ export default function HomeClient({ initialBoard }: Props) {
           onQueryChange={setSearchQuery}
           onSelectResult={handleSearchSelect}
         />
+      )}
+      {historyStatus === "error" && (
+        <div
+          role="alert"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 10,
+            padding: "6px 12px",
+            background: "#fff7ed",
+            borderBottom: "1px solid #fed7aa",
+            color: "#9a3412",
+            fontSize: 12,
+          }}
+        >
+          历史数据暂时无法加载{historyError ? `（${historyError}）` : ""}
+          <button
+            type="button"
+            onClick={retryHistory}
+            style={{
+              border: "1px solid #fdba74",
+              borderRadius: 6,
+              padding: "3px 8px",
+              background: "#ffffff",
+              color: "#9a3412",
+              cursor: "pointer",
+              fontSize: 11,
+            }}
+          >
+            重试
+          </button>
+        </div>
       )}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, position: "relative" }}>
         <div
